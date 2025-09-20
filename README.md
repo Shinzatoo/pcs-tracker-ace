@@ -1,73 +1,190 @@
-# Welcome to your Lovable project
+# PCS Maritime - Port Control System
 
-## Project info
+Um sistema moderno de controle portuário integrado ao n8n para monitoramento em tempo real de operações marítimas.
 
-**URL**: https://lovable.dev/projects/fe0f6228-fbf2-46e1-8f8b-0bbfc053de68
+## 🚢 Funcionalidades
 
-## How can I edit this code?
+### ✨ Dashboard Principal
+- **KPIs em tempo real**: Total de embarques, alertas ativos, status OK e fontes integradas
+- **Distribuição por status**: Visualização clara dos diferentes status dos navios
+- **Alertas recentes**: Intercorrências que requerem atenção imediata
+- **Ações rápidas**: Acesso direto às funcionalidades principais
 
-There are several ways of editing your application.
+### 📋 Lista de Embarques
+- **Filtros avançados**: Por status, origem e busca livre
+- **Tabela dinâmica**: Ordenação, paginação e seleção de colunas
+- **Exportação CSV**: Dados filtrados para análise externa
+- **Status em tempo real**: Badges visuais com indicadores animados
 
-**Use Lovable**
+### 🔍 Detalhes do Embarque
+- **Visão completa**: Informações de agência, autoridade, praticagem e terminal
+- **Timeline interativa**: Cronologia de eventos e atualizações
+- **Sistema de alertas**: Notificações específicas por navio
+- **Metadados estruturados**: Todos os dados organizados em abas
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/fe0f6228-fbf2-46e1-8f8b-0bbfc053de68) and start prompting.
+### ⭐ Sistema de Favoritos
+- **Marcação rápida**: Estrela para favoritar navios importantes
+- **Lista dedicada**: Página exclusiva para embarques favoritos
+- **Status offline**: Mantém dados mesmo quando navio sai do sistema
+- **Persistência local**: Favoritos salvos no localStorage
 
-Changes made via Lovable will be committed automatically to this repo.
+## 🎨 Design System
 
-**Use your preferred IDE**
+### Paleta Marítima
+- **Primária**: Azul oceano profundo (`#1D4ED8`)
+- **Sucesso**: Verde marinho (`#16A34A`)  
+- **Atenção**: Laranja navegação (`#F59E0B`)
+- **Erro**: Vermelho alerta (`#DC2626`)
+- **Neutro**: Cinza portuário (`#64748B`)
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Status Badges
+- **OK/Ativo** → Verde (operações normais)
+- **Pendente** → Amarelo (aguardando autorização)
+- **Bloqueado** → Vermelho (documentação/acesso negado)
+- **Conflito** → Laranja (divergência de horários)
+- **Aguardando** → Cinza (terminal esperando navio)
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## 🔌 API Integration
 
-Follow these steps:
+### Endpoint Principal
+```
+https://n8n.hackathon.souamigu.org.br/webhook/pcs/status
+```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### Estrutura de Dados
+O sistema processa dados de 4 fontes integradas:
+- **Agência Marítima**: Documentação e manifestos
+- **Autoridade Portuária**: Autorizações e acessos  
+- **Praticagem**: Manobras e execução
+- **Terminal Portuário**: Operações e atracação
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### Auto-descoberta
+- **Schema flexível**: Detecta automaticamente estrutura dos dados
+- **Field mapping**: Mapeamento inteligente de campos similares
+- **Tolerância a erros**: Graceful handling de campos ausentes
+- **Normalização**: Unifica diferentes formatos de resposta
 
-# Step 3: Install the necessary dependencies.
-npm i
+## 🚀 Como Usar
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+### 1. Configuração
+```bash
+# Clone o repositório
+git clone [URL_DO_REPO]
+
+# Instale dependências
+npm install
+
+# Inicie o desenvolvimento
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### 2. Variáveis de Ambiente
+```env
+# Opcional: Proxy para contornar CORS
+VITE_API_PROXY=https://seu-proxy.com/api
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+# Base URL da API (padrão já configurado)
+VITE_API_BASE=https://n8n.hackathon.souamigu.org.br/webhook/pcs/status
+```
 
-**Use GitHub Codespaces**
+### 3. Navegação
+- **Dashboard** (`/`) - Visão geral e KPIs
+- **Embarques** (`/pcs`) - Lista completa com filtros
+- **Detalhes** (`/pcs/:id`) - Informações específicas do navio
+- **Favoritos** (`/favorites`) - Navios marcados para acompanhamento
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 🛠️ Tecnologias
 
-## What technologies are used for this project?
+### Frontend
+- **React 18** com TypeScript
+- **Vite** para build e desenvolvimento
+- **Tailwind CSS** + design system customizado
+- **shadcn/ui** para componentes base
+- **Lucide React** para ícones
 
-This project is built with:
+### Gerenciamento de Estado
+- **TanStack Query** para cache e sincronização
+- **React Hook Form** para formulários
+- **Zod** para validação de dados
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### Tabelas e Dados
+- **TanStack Table** para tabelas complexas
+- **Date-fns** para manipulação de datas
+- **React Router** para navegação
 
-## How can I deploy this project?
+## 📁 Estrutura do Projeto
 
-Simply open [Lovable](https://lovable.dev/projects/fe0f6228-fbf2-46e1-8f8b-0bbfc053de68) and click on Share -> Publish.
+```
+src/
+├── components/
+│   ├── layout/          # Header, navegação
+│   └── ui/             # Componentes base (StatusBadge, KpiCard, DataTable)
+├── hooks/              # Hooks customizados (usePcsData, useFavorites)
+├── lib/                # API client e utilitários
+├── pages/              # Páginas principais
+│   ├── Dashboard.tsx   # KPIs e visão geral
+│   ├── PcsList.tsx     # Lista com filtros
+│   ├── PcsDetail.tsx   # Detalhes e timeline
+│   └── Favorites.tsx   # Embarques favoritos
+└── assets/             # Imagens e recursos
+```
 
-## Can I connect a custom domain to my Lovable project?
+## 🔒 Segurança
 
-Yes, you can!
+- **CORS**: Configurado para requests cross-origin
+- **Sanitização**: Dados renderizados de forma segura
+- **Proxy support**: Variável para contornar limitações de CORS
+- **Tokens**: Não há exposição de chaves no cliente
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## 📊 Workflow n8n
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+O arquivo `docs/n8n-workflow.json` contém o workflow completo que:
+
+1. **Coleta dados** de 4 APIs marítimas diferentes
+2. **Normaliza e reconcilia** informações por `identificadorNavio`
+3. **Gera alertas** baseados em regras de negócio
+4. **Consolida status** para cada embarcação
+5. **Expõe via webhook** no formato padronizado
+
+### Regras de Alertas
+- **Bloqueio documental**: Status documentação ≠ "completo"
+- **Acesso negado/pendente**: Status autorização problemático
+- **Conflito horários**: Divergência >15min entre autorização e execução
+- **Terminal aguardando**: Sem atracação real + status "aguardando"
+
+## 🔄 Auto-refresh
+
+- **Dashboard**: Atualiza a cada 60 segundos
+- **Cache inteligente**: 30s de stale time, 5min de garbage collection
+- **Retry automático**: 2 tentativas com backoff exponencial
+- **Refresh manual**: Botão para forçar atualização
+
+## 🎯 Próximos Passos
+
+### Funcionalidades Planejadas
+- [ ] **Notificações push** para alertas críticos
+- [ ] **Relatórios** em PDF/Excel  
+- [ ] **Gráficos avançados** com Recharts
+- [ ] **Modo offline** com service worker
+- [ ] **Filtros salvos** (bookmarks de views)
+
+### Melhorias Técnicas
+- [ ] **Testes E2E** com Playwright
+- [ ] **Storybook** para componentes
+- [ ] **PWA** com manifest e instalação
+- [ ] **Websockets** para updates real-time
+
+## 📞 Suporte
+
+Para dúvidas sobre:
+- **Frontend**: Verificar console do navegador e logs de rede
+- **API**: Testar endpoint diretamente no n8n
+- **Dados**: Validar workflow e mapeamento de campos
+
+## 🏆 Créditos
+
+Sistema desenvolvido para o **Hackathon Portuário 2024**, integrando tecnologias modernas de frontend com a robustez do n8n para automação de workflows marítimos.
+
+---
+
+**PCS Maritime** - Monitoramento inteligente para operações portuárias eficientes! ⚓️🚢

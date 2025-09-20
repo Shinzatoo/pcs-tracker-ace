@@ -1,0 +1,1052 @@
+{
+  "name": "My workflow 10",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        80
+      ],
+      "id": "4efd28a7-d8f6-40d1-bb60-f6603faa05a6",
+      "name": "Start (Manual)"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -112,
+        368
+      ],
+      "id": "5c2a89c2-5e1f-4fdb-9619-d9a0d251a33e",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://api.hackathon.souamigu.org.br/agencia-maritima",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        192,
+        0
+      ],
+      "id": "50e4aa23-9de4-4393-8e65-2c235e4a2260",
+      "name": "GET Agência"
+    },
+    {
+      "parameters": {
+        "url": "https://api.hackathon.souamigu.org.br/autoridade-portuaria",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        192,
+        160
+      ],
+      "id": "16ec17ae-f13c-4e68-8b43-d7101c82e0c3",
+      "name": "GET Autoridade"
+    },
+    {
+      "parameters": {
+        "url": "https://api.hackathon.souamigu.org.br/praticagem",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        192,
+        304
+      ],
+      "id": "bda8891f-ae33-4db3-a700-5a7070281aef",
+      "name": "GET Praticagem"
+    },
+    {
+      "parameters": {
+        "url": "https://api.hackathon.souamigu.org.br/terminal-portuario",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        192,
+        448
+      ],
+      "id": "c917af79-91af-4905-b9c2-e05efe59f3fe",
+      "name": "GET Terminal"
+    },
+    {
+      "parameters": {
+        "jsCode": "/****************************************************\n * PCS – Normalize & Reconcile (versão 2 – robusta)\n * - Lê TODOS os itens de cada nó GET (por nome)\n * - Achata respostas: [], {data:[]}, {items:[]}, objeto\n * - Consolida por identificadorNavio\n * - Regras simples de alertas e statusResumo\n ****************************************************/\n\n// === 1) Helpers de leitura ===\n// Lê TODOS os itens gerados por um nó e \"achata\" o que for array/objeto {data:[]} ou {items:[]}\nfunction listFrom(nodeName) {\n  try {\n    const items = $items(nodeName) || [];\n    const out = [];\n    for (const it of items) {\n      const j = it.json;\n      if (!j) continue;\n\n      if (Array.isArray(j)) {\n        // resposta é um array bruto: [ {...}, {...} ]\n        out.push(...j);\n      } else if (Array.isArray(j.data)) {\n        // resposta veio embrulhada: { data: [ {...}, {...} ] }\n        out.push(...j.data);\n      } else if (Array.isArray(j.items)) {\n        // variante: { items: [ {...} ] }\n        out.push(...j.items);\n      } else {\n        // objeto simples já é 1 registro\n        out.push(j);\n      }\n    }\n    return out;\n  } catch (e) {\n    // nó não executou ou não há itens\n    return [];\n  }\n}\n\n// === 2) Carrega listas das 4 fontes ===\nconst agList = listFrom(\"GET Agência\");\nconst auList = listFrom(\"GET Autoridade\");\nconst prList = listFrom(\"GET Praticagem\");\nconst teList = listFrom(\"GET Terminal\");\n\n// (opcional) métricas de depuração\nconst counts = { agencia: agList.length, autoridade: auList.length, praticagem: prList.length, terminal: teList.length };\n\n// === 3) Agrupa por identificadorNavio ===\nconst toMap = (list, key) => {\n  const m = new Map();\n  for (const row of list) {\n    const id = row?.[key];\n    if (!id) continue;\n    if (!m.has(id)) m.set(id, []);\n    m.get(id).push(row);\n  }\n  return m;\n};\n\nconst mAg = toMap(agList, \"identificadorNavio\");\nconst mAu = toMap(auList, \"identificadorNavio\");\nconst mPr = toMap(prList, \"identificadorNavio\");\nconst mTe = toMap(teList, \"identificadorNavio\");\n\n// === 4) Consolida por navio ===\nconst vesselIds = new Set([...mAg.keys(), ...mAu.keys(), ...mPr.keys(), ...mTe.keys()]);\nconst vessels = [];\nconst alerts = [];\nconst LIMIAR_MINUTOS = 15;\n\nfunction diffMinutes(a, b) {\n  if (!a || !b) return null;\n  const A = new Date(a).getTime();\n  const B = new Date(b).getTime();\n  if (isNaN(A) || isNaN(B)) return null;\n  return Math.round((B - A) / 60000);\n}\n\nfor (const vessel_id of vesselIds) {\n  const ag = (mAg.get(vessel_id) || [])[0] || null;\n  const au = (mAu.get(vessel_id) || [])[0] || null;\n  const pr = (mPr.get(vessel_id) || [])[0] || null;\n  const te = (mTe.get(vessel_id) || [])[0] || null;\n\n  // 4.1 objeto canônico mínimo\n  const can = {\n    vessel_id,\n    agency: ag ? {\n      id: ag.id,\n      nomeAgencia: ag.nomeAgencia,\n      manifestoEntregue: ag.manifestoEntregue ?? null,\n      statusDocumentacao: ag.statusDocumentacao ?? null,\n      dataEnvioInformacoes: ag.dataEnvioInformacoes ?? null,\n      documentosAdicionais: ag.documentosAdicionais ?? null\n    } : null,\n    authority: au ? {\n      id: au.id,\n      tipoMovimentacao: au.tipoMovimentacao ?? null,\n      dataSolicitacao: au.dataSolicitacaoAcesso ?? null,\n      dataAutorizacao: au.dataAutorizacaoAcesso ?? null,\n      status: au.statusAutorizacao ?? null,\n      motivo: au.motivoIntercorrencia ?? null,\n      observacoes: au.observacoes ?? null\n    } : null,\n    pilotage: pr ? {\n      id: pr.id,\n      tipo: pr.manobraTipo ?? null,\n      dataSolicitacao: pr.dataSolicitacao ?? null,\n      dataExecucao: pr.dataExecucao ?? null,\n      status: pr.status ?? null,\n      motivo: pr.motivoIntercorrencia ?? null,\n      observacoes: pr.observacoes ?? null\n    } : null,\n    terminal: te ? {\n      id: te.id,\n      terminal: te.nomeTerminal ?? null,\n      dataPrevistaAtracacao: te.dataPrevistaAtracacao ?? null,\n      dataRealAtracacao: te.dataRealAtracacao ?? null,\n      tipoOperacao: te.tipoOperacao ?? null,\n      statusOperacao: te.statusOperacao ?? null,\n      observacoes: te.observacoes ?? null\n    } : null\n  };\n\n  // 4.2 regras de ALERTA\n  // (1) Bloqueio documental – Agência\n  if (can.agency?.statusDocumentacao && can.agency.statusDocumentacao !== \"completo\") {\n    alerts.push({\n      type: \"BloqueioDocumental\",\n      vessel_id,\n      statusDocumentacao: can.agency.statusDocumentacao,\n      suggestion: \"Regularizar documentação (manifesto/fiscal) antes da manobra/operação.\"\n    });\n  }\n\n  // (2) Acesso pendente/negado – Autoridade\n  if (can.authority?.status === \"pendente\") {\n    alerts.push({\n      type: \"AcessoPendente\",\n      vessel_id,\n      reason: can.authority.motivo || \"Em análise\",\n      suggestion: \"Reprogramar janela com Autoridade e Praticagem.\"\n    });\n  }\n  if (can.authority?.status === \"negado\") {\n    alerts.push({\n      type: \"AcessoNegado\",\n      vessel_id,\n      reason: can.authority.motivo || \"Sem motivo informado\",\n      suggestion: \"Resolver intercorrência com armador/Autoridade.\"\n    });\n  }\n\n  // (3) Conflito de horários – Autorização (Autoridade) vs Execução (Praticagem)\n  const dAut = can.authority?.dataAutorizacao || null;\n  const dExec = can.pilotage?.dataExecucao || null;\n  const delta = diffMinutes(dAut, dExec);\n  if (delta !== null && Math.abs(delta) > LIMIAR_MINUTOS) {\n    alerts.push({\n      type: \"DataMismatch\",\n      vessel_id,\n      fields: { dataAutorizacao: dAut, dataExecucaoManobra: dExec, deltaMin: delta },\n      suggestion: \"Alinhar janela SPA × Praticagem; sinalizar ao Terminal.\"\n    });\n  }\n\n  // (4) Terminal aguardando (sem atracação real)\n  const statusOp = can.terminal?.statusOperacao || \"\";\n  const realAtrac = can.terminal?.dataRealAtracacao || null;\n  if (can.terminal && !realAtrac && typeof statusOp === \"string\" && statusOp.startsWith(\"aguardando\")) {\n    alerts.push({\n      type: \"TerminalAguardando\",\n      vessel_id,\n      statusOperacao: statusOp,\n      suggestion: \"Checar bloqueios (documentos/janela/manobra) e replanejar.\"\n    });\n  }\n\n  // 4.3 status-resumo do navio (para painel/Slack)\n  let statusResumo = \"ok\";\n  const has = (t) => alerts.find(a => a.vessel_id === vessel_id && a.type === t);\n  if (has(\"AcessoNegado\")) statusResumo = \"bloqueado\";\n  else if (has(\"BloqueioDocumental\")) statusResumo = \"bloqueado_documento\";\n  else if (has(\"AcessoPendente\")) statusResumo = \"pendente_autorizacao\";\n  else if (has(\"DataMismatch\")) statusResumo = \"conflito_horarios\";\n  else if (has(\"TerminalAguardando\")) statusResumo = \"aguardando_navio\";\n\n  vessels.push({ ...can, statusResumo });\n}\n\n// === 5) Retorno único ===\nreturn [{\n  json: {\n    vessels,\n    alerts,\n    counts, // útil para validar que está lendo os 4 nós\n    generatedAt: new Date().toISOString()\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        976,
+        432
+      ],
+      "id": "cee769e4-82d3-4097-9815-f01daa53a92f",
+      "name": "Normalize & Reconcile"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        384,
+        144
+      ],
+      "id": "616a2d05-8a78-4fd4-9a92-ea42eebe7c6b",
+      "name": "Wait (Agência+Autoridade)"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        544,
+        288
+      ],
+      "id": "1fb37d7e-fba3-40e1-a775-a5180bb99816",
+      "name": "Wait (+Praticagem)"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        784,
+        432
+      ],
+      "id": "a6797a31-6351-4301-8902-134ddbd903b7",
+      "name": "Wait (+Terminal)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "bc4d3d1d-4502-457e-a720-8f99177eb6e8",
+              "leftValue": "={{ $json[\"alerts\"].length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1232,
+        288
+      ],
+      "id": "d2f30e39-0e95-4b03-b15f-a07be89dac06",
+      "name": "Tem alertas?"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "=https://app.slack.com/client/T09FTMSU64X/C09G8CTMUUA?entry_point=redirect_flow",
+          "mode": "url"
+        },
+        "text": "=*📋 Resumo executivo (IA):*\n{{\n  // tenta nos 3 lugares mais comuns\n  $json.output?.[0]?.content?.[0]?.text?.value\n  ?? $json.choices?.[0]?.message?.content\n  ?? $json.output_text\n  ?? \"—\"\n}}\n\n*🔎 Top alertas (máx. 8):*\n{{\n  ($json.alerts || [])\n    .slice(0,8)\n    .map((a,idx) => `${idx+1}. *${a.type}* – ${a.vessel_id}${a.fields?.deltaMin ? ` (Δ ${a.fields.deltaMin} min)` : ''}\\n   • ${a.suggestion}`)\n    .join('\\n\\n')\n}}\n\n*📊 KPIs:*  Navios: {{$json.vessels.length}} | Alertas: {{$json.alerts.length}}\n{{\n  Object\n    .entries(($json.alerts || []).reduce((acc,a)=> (acc[a.type]=(acc[a.type]||0)+1, acc), {}))\n    .map(([k,v])=>`${k}: ${v}`)\n    .join(' · ')\n}}\n\n_{{$json.generatedAt}}_\n",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1648,
+        144
+      ],
+      "id": "5f0361c3-e744-410e-a801-e1741b55e890",
+      "name": "Slack Alertas",
+      "webhookId": "20171da4-9c22-4fd9-9e23-993d1e321ae9",
+      "credentials": {
+        "slackApi": {
+          "id": "B3ozlkaejLwHagX4",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1648,
+        -16
+      ],
+      "id": "7b4dd64f-345e-4f3c-8f29-57a0748b2bac",
+      "name": "Send email",
+      "webhookId": "983dc737-d662-4e54-8e54-57a66c183f44",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"message\": \"Sem alertas no período\",\n  \"generatedAt\": \"={{ $json.generatedAt }}\",\n  \"totalNavios\": \"={{ $json.vessels.length }}\",\n  \"totalAlertas\": 0\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1648,
+        288
+      ],
+      "id": "cb19019a-dac8-4e63-855d-7cd3dddfd862",
+      "name": "Sem Alertas (log)"
+    },
+    {
+      "parameters": {
+        "resource": "assistant",
+        "operation": "create",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "name": "ResumoExecutivoPCS",
+        "description": "Gera resumo executivo de alertas PCS para diretoria.",
+        "instructions": "Você é um analista de operações portuárias. Resuma com objetividade executiva os principais riscos e ações em linguagem clara e curta. \nPriorize bloqueios documentais, acessos pendentes/negados e divergências de horário. \nResponda sempre em até 6 linhas.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        192,
+        672
+      ],
+      "id": "6b70bc51-800a-4b4c-817d-2e6ccbe876ca",
+      "name": "Create an assistant",
+      "credentials": {
+        "openAiApi": {
+          "id": "UenFlt2xmhxuF97s",
+          "name": "OpenAi account 19"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "assistant",
+        "assistantId": {
+          "__rl": true,
+          "value": "asst_eehBYLOYiaELmK73SEeV5S51",
+          "mode": "list",
+          "cachedResultName": "ResumoExecutivoPCS"
+        },
+        "prompt": "define",
+        "text": "Gere um resumo executivo de até 6 linhas, em português, priorizando:\n1) bloqueios documentais (statusDocumentacao != \"completo\")\n2) acessos pendentes/negados da Autoridade\n3) divergências de horário (|Δ| >= 45 min) entre dataAutorizacao e dataExecucao\n4) recomendações práticas (1-2 ações).\n\nDados (JSON de alertas):\n{{ JSON.stringify($json.alerts) }}\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1168,
+        432
+      ],
+      "id": "7d2cd935-af61-4397-9025-352e186777dd",
+      "name": "Message an assistant",
+      "credentials": {
+        "openAiApi": {
+          "id": "UenFlt2xmhxuF97s",
+          "name": "OpenAi account 19"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "=https://app.slack.com/client/T09FTMSU64X/C09G8CTMUUA?entry_point=redirect_flow",
+          "mode": "url"
+        },
+        "text": "={{ $json.output }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1648,
+        432
+      ],
+      "id": "7d5f5cec-a03d-452c-ad0c-ba23d848169a",
+      "name": "Slack Alertas1",
+      "webhookId": "20171da4-9c22-4fd9-9e23-993d1e321ae9",
+      "credentials": {
+        "slackApi": {
+          "id": "B3ozlkaejLwHagX4",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2496,
+        -368
+      ],
+      "id": "06aaf717-360f-4896-9ca2-b74cf69643a4",
+      "name": "Schedule Trigger1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "url": "https://api.hackathon.souamigu.org.br/agencia-maritima",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2192,
+        -736
+      ],
+      "id": "ececb1c0-77ae-4a8c-98dd-9139d3575fc2",
+      "name": "GET Agência1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "url": "https://api.hackathon.souamigu.org.br/autoridade-portuaria",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2192,
+        -576
+      ],
+      "id": "937187b1-6c3b-4c94-861d-12ce51706420",
+      "name": "GET Autoridade1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "url": "https://api.hackathon.souamigu.org.br/praticagem",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2192,
+        -432
+      ],
+      "id": "91e07b54-0f73-4749-8fef-6622b6d076e2",
+      "name": "GET Praticagem1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "url": "https://api.hackathon.souamigu.org.br/terminal-portuario",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2192,
+        -288
+      ],
+      "id": "a8c527fa-4b4d-493a-b121-d53e9ad8203f",
+      "name": "GET Terminal1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "/****************************************************\n * PCS – Normalize & Reconcile (versão 2 – robusta)\n * - Lê TODOS os itens de cada nó GET (por nome)\n * - Achata respostas: [], {data:[]}, {items:[]}, objeto\n * - Consolida por identificadorNavio\n * - Regras simples de alertas e statusResumo\n ****************************************************/\n\n// === 1) Helpers de leitura ===\n// Lê TODOS os itens gerados por um nó e \"achata\" o que for array/objeto {data:[]} ou {items:[]}\nfunction listFrom(nodeName) {\n  try {\n    const items = $items(nodeName) || [];\n    const out = [];\n    for (const it of items) {\n      const j = it.json;\n      if (!j) continue;\n\n      if (Array.isArray(j)) {\n        // resposta é um array bruto: [ {...}, {...} ]\n        out.push(...j);\n      } else if (Array.isArray(j.data)) {\n        // resposta veio embrulhada: { data: [ {...}, {...} ] }\n        out.push(...j.data);\n      } else if (Array.isArray(j.items)) {\n        // variante: { items: [ {...} ] }\n        out.push(...j.items);\n      } else {\n        // objeto simples já é 1 registro\n        out.push(j);\n      }\n    }\n    return out;\n  } catch (e) {\n    // nó não executou ou não há itens\n    return [];\n  }\n}\n\n// === 2) Carrega listas das 4 fontes ===\nconst agList = listFrom(\"GET Agência\");\nconst auList = listFrom(\"GET Autoridade\");\nconst prList = listFrom(\"GET Praticagem\");\nconst teList = listFrom(\"GET Terminal\");\n\n// (opcional) métricas de depuração\nconst counts = { agencia: agList.length, autoridade: auList.length, praticagem: prList.length, terminal: teList.length };\n\n// === 3) Agrupa por identificadorNavio ===\nconst toMap = (list, key) => {\n  const m = new Map();\n  for (const row of list) {\n    const id = row?.[key];\n    if (!id) continue;\n    if (!m.has(id)) m.set(id, []);\n    m.get(id).push(row);\n  }\n  return m;\n};\n\nconst mAg = toMap(agList, \"identificadorNavio\");\nconst mAu = toMap(auList, \"identificadorNavio\");\nconst mPr = toMap(prList, \"identificadorNavio\");\nconst mTe = toMap(teList, \"identificadorNavio\");\n\n// === 4) Consolida por navio ===\nconst vesselIds = new Set([...mAg.keys(), ...mAu.keys(), ...mPr.keys(), ...mTe.keys()]);\nconst vessels = [];\nconst alerts = [];\nconst LIMIAR_MINUTOS = 15;\n\nfunction diffMinutes(a, b) {\n  if (!a || !b) return null;\n  const A = new Date(a).getTime();\n  const B = new Date(b).getTime();\n  if (isNaN(A) || isNaN(B)) return null;\n  return Math.round((B - A) / 60000);\n}\n\nfor (const vessel_id of vesselIds) {\n  const ag = (mAg.get(vessel_id) || [])[0] || null;\n  const au = (mAu.get(vessel_id) || [])[0] || null;\n  const pr = (mPr.get(vessel_id) || [])[0] || null;\n  const te = (mTe.get(vessel_id) || [])[0] || null;\n\n  // 4.1 objeto canônico mínimo\n  const can = {\n    vessel_id,\n    agency: ag ? {\n      id: ag.id,\n      nomeAgencia: ag.nomeAgencia,\n      manifestoEntregue: ag.manifestoEntregue ?? null,\n      statusDocumentacao: ag.statusDocumentacao ?? null,\n      dataEnvioInformacoes: ag.dataEnvioInformacoes ?? null,\n      documentosAdicionais: ag.documentosAdicionais ?? null\n    } : null,\n    authority: au ? {\n      id: au.id,\n      tipoMovimentacao: au.tipoMovimentacao ?? null,\n      dataSolicitacao: au.dataSolicitacaoAcesso ?? null,\n      dataAutorizacao: au.dataAutorizacaoAcesso ?? null,\n      status: au.statusAutorizacao ?? null,\n      motivo: au.motivoIntercorrencia ?? null,\n      observacoes: au.observacoes ?? null\n    } : null,\n    pilotage: pr ? {\n      id: pr.id,\n      tipo: pr.manobraTipo ?? null,\n      dataSolicitacao: pr.dataSolicitacao ?? null,\n      dataExecucao: pr.dataExecucao ?? null,\n      status: pr.status ?? null,\n      motivo: pr.motivoIntercorrencia ?? null,\n      observacoes: pr.observacoes ?? null\n    } : null,\n    terminal: te ? {\n      id: te.id,\n      terminal: te.nomeTerminal ?? null,\n      dataPrevistaAtracacao: te.dataPrevistaAtracacao ?? null,\n      dataRealAtracacao: te.dataRealAtracacao ?? null,\n      tipoOperacao: te.tipoOperacao ?? null,\n      statusOperacao: te.statusOperacao ?? null,\n      observacoes: te.observacoes ?? null\n    } : null\n  };\n\n  // 4.2 regras de ALERTA\n  // (1) Bloqueio documental – Agência\n  if (can.agency?.statusDocumentacao && can.agency.statusDocumentacao !== \"completo\") {\n    alerts.push({\n      type: \"BloqueioDocumental\",\n      vessel_id,\n      statusDocumentacao: can.agency.statusDocumentacao,\n      suggestion: \"Regularizar documentação (manifesto/fiscal) antes da manobra/operação.\"\n    });\n  }\n\n  // (2) Acesso pendente/negado – Autoridade\n  if (can.authority?.status === \"pendente\") {\n    alerts.push({\n      type: \"AcessoPendente\",\n      vessel_id,\n      reason: can.authority.motivo || \"Em análise\",\n      suggestion: \"Reprogramar janela com Autoridade e Praticagem.\"\n    });\n  }\n  if (can.authority?.status === \"negado\") {\n    alerts.push({\n      type: \"AcessoNegado\",\n      vessel_id,\n      reason: can.authority.motivo || \"Sem motivo informado\",\n      suggestion: \"Resolver intercorrência com armador/Autoridade.\"\n    });\n  }\n\n  // (3) Conflito de horários – Autorização (Autoridade) vs Execução (Praticagem)\n  const dAut = can.authority?.dataAutorizacao || null;\n  const dExec = can.pilotage?.dataExecucao || null;\n  const delta = diffMinutes(dAut, dExec);\n  if (delta !== null && Math.abs(delta) > LIMIAR_MINUTOS) {\n    alerts.push({\n      type: \"DataMismatch\",\n      vessel_id,\n      fields: { dataAutorizacao: dAut, dataExecucaoManobra: dExec, deltaMin: delta },\n      suggestion: \"Alinhar janela SPA × Praticagem; sinalizar ao Terminal.\"\n    });\n  }\n\n  // (4) Terminal aguardando (sem atracação real)\n  const statusOp = can.terminal?.statusOperacao || \"\";\n  const realAtrac = can.terminal?.dataRealAtracacao || null;\n  if (can.terminal && !realAtrac && typeof statusOp === \"string\" && statusOp.startsWith(\"aguardando\")) {\n    alerts.push({\n      type: \"TerminalAguardando\",\n      vessel_id,\n      statusOperacao: statusOp,\n      suggestion: \"Checar bloqueios (documentos/janela/manobra) e replanejar.\"\n    });\n  }\n\n  // 4.3 status-resumo do navio (para painel/Slack)\n  let statusResumo = \"ok\";\n  const has = (t) => alerts.find(a => a.vessel_id === vessel_id && a.type === t);\n  if (has(\"AcessoNegado\")) statusResumo = \"bloqueado\";\n  else if (has(\"BloqueioDocumental\")) statusResumo = \"bloqueado_documento\";\n  else if (has(\"AcessoPendente\")) statusResumo = \"pendente_autorizacao\";\n  else if (has(\"DataMismatch\")) statusResumo = \"conflito_horarios\";\n  else if (has(\"TerminalAguardando\")) statusResumo = \"aguardando_navio\";\n\n  vessels.push({ ...can, statusResumo });\n}\n\n// === 5) Retorno único ===\nreturn [{\n  json: {\n    vessels,\n    alerts,\n    counts, // útil para validar que está lendo os 4 nós\n    generatedAt: new Date().toISOString()\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1408,
+        -304
+      ],
+      "id": "418418f5-ea95-413a-a5b2-e25e74679b0e",
+      "name": "Normalize & Reconcile1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -2000,
+        -592
+      ],
+      "id": "a9c1e2af-bb93-4500-9e6b-5aa9d59b4664",
+      "name": "Wait (Agência+Autoridade)1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1840,
+        -448
+      ],
+      "id": "4430291b-b2b2-4377-82dd-0c4360bc4e68",
+      "name": "Wait (+Praticagem)1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1600,
+        -304
+      ],
+      "id": "b77b2d66-d589-4e78-9aa1-cbe20f6d81ef",
+      "name": "Wait (+Terminal)1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "bc4d3d1d-4502-457e-a720-8f99177eb6e8",
+              "leftValue": "={{ $json[\"alerts\"].length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1264,
+        -448
+      ],
+      "id": "85145472-698f-4be0-a840-7ae7573fb57b",
+      "name": "Tem alertas?1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "=https://app.slack.com/client/T09FTMSU64X/C09G8CTMUUA?entry_point=redirect_flow",
+          "mode": "url"
+        },
+        "text": "=*📋 Resumo executivo (IA):*\n{{\n  // tenta nos 3 lugares mais comuns\n  $json.output?.[0]?.content?.[0]?.text?.value\n  ?? $json.choices?.[0]?.message?.content\n  ?? $json.output_text\n  ?? \"—\"\n}}\n\n*🔎 Top alertas (máx. 8):*\n{{\n  ($json.alerts || [])\n    .slice(0,8)\n    .map((a,idx) => `${idx+1}. *${a.type}* – ${a.vessel_id}${a.fields?.deltaMin ? ` (Δ ${a.fields.deltaMin} min)` : ''}\\n   • ${a.suggestion}`)\n    .join('\\n\\n')\n}}\n\n*📊 KPIs:*  Navios: {{$json.vessels.length}} | Alertas: {{$json.alerts.length}}\n{{\n  Object\n    .entries(($json.alerts || []).reduce((acc,a)=> (acc[a.type]=(acc[a.type]||0)+1, acc), {}))\n    .map(([k,v])=>`${k}: ${v}`)\n    .join(' · ')\n}}\n\n_{{$json.generatedAt}}_\n",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        -928,
+        -528
+      ],
+      "id": "690d6b3e-1823-4c39-8bcc-188d58572b51",
+      "name": "Slack Alertas2",
+      "webhookId": "20171da4-9c22-4fd9-9e23-993d1e321ae9",
+      "credentials": {
+        "slackApi": {
+          "id": "B3ozlkaejLwHagX4",
+          "name": "Slack account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -928,
+        -688
+      ],
+      "id": "b33a4c91-c346-43ca-8f2a-bdd6512803cb",
+      "name": "Send email1",
+      "webhookId": "983dc737-d662-4e54-8e54-57a66c183f44",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"message\": \"Sem alertas no período\",\n  \"generatedAt\": \"={{ $json.generatedAt }}\",\n  \"totalNavios\": \"={{ $json.vessels.length }}\",\n  \"totalAlertas\": 0\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -928,
+        -384
+      ],
+      "id": "85e17a65-9c7f-4554-b6e2-88f45427c909",
+      "name": "Sem Alertas (log)1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "resource": "assistant",
+        "assistantId": {
+          "__rl": true,
+          "value": "asst_eehBYLOYiaELmK73SEeV5S51",
+          "mode": "list",
+          "cachedResultName": "ResumoExecutivoPCS"
+        },
+        "prompt": "define",
+        "text": "Gere um resumo executivo de até 6 linhas, em português, priorizando:\n1) bloqueios documentais (statusDocumentacao != \"completo\")\n2) acessos pendentes/negados da Autoridade\n3) divergências de horário (|Δ| >= 45 min) entre dataAutorizacao e dataExecucao\n4) recomendações práticas (1-2 ações).\n\nDados (JSON de alertas):\n{{ JSON.stringify($json.alerts) }}\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -1264,
+        -240
+      ],
+      "id": "3025faba-54dc-442a-9c0c-e01a73c757ce",
+      "name": "Message an assistant1",
+      "credentials": {
+        "openAiApi": {
+          "id": "UenFlt2xmhxuF97s",
+          "name": "OpenAi account 19"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "=https://app.slack.com/client/T09FTMSU64X/C09G8CTMUUA?entry_point=redirect_flow",
+          "mode": "url"
+        },
+        "text": "={{ $json.output }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        -944,
+        -240
+      ],
+      "id": "5053be4d-b0bf-4600-b6b5-a9bba0f2e811",
+      "name": "Slack Alertas3",
+      "webhookId": "20171da4-9c22-4fd9-9e23-993d1e321ae9",
+      "credentials": {
+        "slackApi": {
+          "id": "B3ozlkaejLwHagX4",
+          "name": "Slack account"
+        }
+      },
+      "disabled": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Start (Manual)": {
+      "main": [
+        [
+          {
+            "node": "GET Terminal",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GET Praticagem",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GET Autoridade",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GET Agência",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "GET Agência",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GET Terminal",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GET Praticagem",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GET Autoridade",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET Agência": {
+      "main": [
+        [
+          {
+            "node": "Wait (Agência+Autoridade)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET Autoridade": {
+      "main": [
+        [
+          {
+            "node": "Wait (Agência+Autoridade)",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "GET Praticagem": {
+      "main": [
+        [
+          {
+            "node": "Wait (+Praticagem)",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "GET Terminal": {
+      "main": [
+        [
+          {
+            "node": "Wait (+Terminal)",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Wait (Agência+Autoridade)": {
+      "main": [
+        [
+          {
+            "node": "Wait (+Praticagem)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait (+Praticagem)": {
+      "main": [
+        [
+          {
+            "node": "Wait (+Terminal)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait (+Terminal)": {
+      "main": [
+        [
+          {
+            "node": "Normalize & Reconcile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize & Reconcile": {
+      "main": [
+        [
+          {
+            "node": "Message an assistant",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Tem alertas?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem alertas?": {
+      "main": [
+        [
+          {
+            "node": "Send email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Slack Alertas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sem Alertas (log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack Alertas": {
+      "main": [
+        []
+      ]
+    },
+    "Message an assistant": {
+      "main": [
+        [
+          {
+            "node": "Slack Alertas",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Slack Alertas1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger1": {
+      "main": [
+        [
+          {
+            "node": "GET Agência1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GET Terminal1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GET Praticagem1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GET Autoridade1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET Agência1": {
+      "main": [
+        [
+          {
+            "node": "Wait (Agência+Autoridade)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET Autoridade1": {
+      "main": [
+        [
+          {
+            "node": "Wait (Agência+Autoridade)1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "GET Praticagem1": {
+      "main": [
+        [
+          {
+            "node": "Wait (+Praticagem)1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "GET Terminal1": {
+      "main": [
+        [
+          {
+            "node": "Wait (+Terminal)1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Normalize & Reconcile1": {
+      "main": [
+        [
+          {
+            "node": "Message an assistant1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Tem alertas?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait (Agência+Autoridade)1": {
+      "main": [
+        [
+          {
+            "node": "Wait (+Praticagem)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait (+Praticagem)1": {
+      "main": [
+        [
+          {
+            "node": "Wait (+Terminal)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait (+Terminal)1": {
+      "main": [
+        [
+          {
+            "node": "Normalize & Reconcile1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem alertas?1": {
+      "main": [
+        [
+          {
+            "node": "Send email1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Slack Alertas2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sem Alertas (log)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message an assistant1": {
+      "main": [
+        [
+          {
+            "node": "Slack Alertas2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Slack Alertas3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "2dac1bc0-588f-4c0b-893c-66f404cc9a99",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "21b80bbe30a7f15da69548d8c5b1a235d4d21f49c50c6d7cd7bab88b61c1e138"
+  },
+  "id": "jluksXlvOQkybuK3",
+  "tags": [
+    {
+      "createdAt": "2025-09-20T05:17:58.213Z",
+      "updatedAt": "2025-09-20T05:17:58.213Z",
+      "id": "8eUzHmEmatZMEHmH",
+      "name": "TESTE"
+    },
+    {
+      "createdAt": "2025-09-20T05:18:00.556Z",
+      "updatedAt": "2025-09-20T05:18:00.556Z",
+      "id": "yRTLWFYyh2kBGJYt",
+      "name": "TESTE1"
+    },
+    {
+      "createdAt": "2025-09-20T05:18:01.589Z",
+      "updatedAt": "2025-09-20T05:18:01.589Z",
+      "id": "Pg4yjJ1B6LI609T9",
+      "name": "TESTE2"
+    }
+  ]
+}
