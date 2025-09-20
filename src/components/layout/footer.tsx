@@ -17,7 +17,7 @@ export function Footer() {
           </a>
           <span>e</span>
           <a 
-            href="https://duckduckgo.com/?q=instituto+amigu&ia=web" 
+            href="https://www.institutoamigu.org.br/" 
             target="_blank" 
             rel="noopener noreferrer"
             className="transition-opacity hover:opacity-80"
