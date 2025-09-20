@@ -28,6 +28,7 @@ const navigation = [
   { name: "Dashboard", href: "/" },
   { name: "Embarques", href: "/pcs" },
   { name: "Favoritos", href: "/favorites" },
+  { name: "Relatórios", href: "/reports" },
 ];
 
 export function Header() {

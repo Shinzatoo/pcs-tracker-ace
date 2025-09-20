@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import PcsList from "./pages/PcsList";
 import PcsDetail from "./pages/PcsDetail";
 import Favorites from "./pages/Favorites";
+import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
               <Route path="/pcs" element={<PcsList />} />
               <Route path="/pcs/:vesselId" element={<PcsDetail />} />
               <Route path="/favorites" element={<Favorites />} />
+              <Route path="/reports" element={<Reports />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
