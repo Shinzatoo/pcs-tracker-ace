@@ -152,28 +152,6 @@ O arquivo `docs/n8n-workflow.json` contém o workflow completo que:
 - **Conflito horários**: Divergência >15min entre autorização e execução
 - **Terminal aguardando**: Sem atracação real + status "aguardando"
 
-## 🔄 Auto-refresh
-
-- **Dashboard**: Atualiza a cada 60 segundos
-- **Cache inteligente**: 30s de stale time, 5min de garbage collection
-- **Retry automático**: 2 tentativas com backoff exponencial
-- **Refresh manual**: Botão para forçar atualização
-
-## 🎯 Próximos Passos
-
-### Funcionalidades Planejadas
-- [ ] **Notificações push** para alertas críticos
-- [ ] **Relatórios** em PDF/Excel  
-- [ ] **Gráficos avançados** com Recharts
-- [ ] **Modo offline** com service worker
-- [ ] **Filtros salvos** (bookmarks de views)
-
-### Melhorias Técnicas
-- [ ] **Testes E2E** com Playwright
-- [ ] **Storybook** para componentes
-- [ ] **PWA** com manifest e instalação
-- [ ] **Websockets** para updates real-time
-
 ## 📞 Suporte
 
 Para dúvidas sobre:
@@ -183,7 +161,7 @@ Para dúvidas sobre:
 
 ## 🏆 Créditos
 
-Sistema desenvolvido para o **Hackathon Portuário 2024**, integrando tecnologias modernas de frontend com a robustez do n8n para automação de workflows marítimos.
+Sistema desenvolvido para o **Hackathon Portuário 2025**, integrando tecnologias modernas de frontend com a robustez do n8n para automação de workflows marítimos.
 
 ---
 
