@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
   const { data, isLoading, error, isRefetching } = usePcsData({
-    refetchInterval: 60000, // Auto-refresh every minute
+    // Manual refresh only - no auto-refresh
   });
 
   // Calculate KPIs

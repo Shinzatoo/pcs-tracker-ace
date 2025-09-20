@@ -259,16 +259,46 @@ export default function PcsDetail() {
           <TabsTrigger value="documents">Documentos</TabsTrigger>
         </TabsList>
 
-        {/* Overview Tab */}
+        {/* Overview Tab - Following specified order: Barco -> Documentação -> Autoridade -> Praticagem -> Terminal */}
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {/* Agency Card */}
+          {/* 1. Barco (Main Vessel Info) */}
+          <Card className="border-primary/20 bg-primary/5">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Ship className="h-5 w-5 text-primary" />
+                <span>Informações do Navio</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">ID do Navio</label>
+                  <p className="text-lg font-bold text-primary">{vessel.vessel_id}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Status Geral</label>
+                  <div className="mt-1">
+                    <StatusBadge variant={statusVariant as any}>
+                      {statusLabel}
+                    </StatusBadge>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Última Atualização</label>
+                  <p className="text-sm">{new Date().toLocaleString("pt-BR")}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* 2. Documentação (Agency) */}
             {vessel.agency && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <FileText className="h-5 w-5 text-blue-500" />
-                    <span>Agência Marítima</span>
+                    <span>Documentação</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -290,11 +320,18 @@ export default function PcsDetail() {
                     <label className="text-sm font-medium text-muted-foreground">Manifesto</label>
                     <p className="text-sm">{vessel.agency.manifestoEntregue ? "✓ Entregue" : "✗ Pendente"}</p>
                   </div>
+
+                  {vessel.agency.dataEnvioInformacoes && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Envio de Informações</label>
+                      <p className="text-sm">{new Date(vessel.agency.dataEnvioInformacoes).toLocaleString("pt-BR")}</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
 
-            {/* Authority Card */}
+            {/* 3. Autoridade Portuária */}
             {vessel.authority && (
               <Card>
                 <CardHeader>
@@ -317,10 +354,17 @@ export default function PcsDetail() {
                     <label className="text-sm font-medium text-muted-foreground">Tipo Movimentação</label>
                     <p className="text-sm">{vessel.authority.tipoMovimentacao || "—"}</p>
                   </div>
+
+                  {vessel.authority.dataSolicitacao && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Data Solicitação</label>
+                      <p className="text-sm">{new Date(vessel.authority.dataSolicitacao).toLocaleString("pt-BR")}</p>
+                    </div>
+                  )}
                   
                   {vessel.authority.dataAutorizacao && (
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Autorização</label>
+                      <label className="text-sm font-medium text-muted-foreground">Data Autorização</label>
                       <p className="text-sm">{new Date(vessel.authority.dataAutorizacao).toLocaleString("pt-BR")}</p>
                     </div>
                   )}
@@ -328,7 +372,48 @@ export default function PcsDetail() {
               </Card>
             )}
 
-            {/* Terminal Card */}
+            {/* 4. Praticagem */}
+            {vessel.pilotage && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Anchor className="h-5 w-5 text-purple-500" />
+                    <span>Praticagem</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Status</label>
+                    <div className="mt-1">
+                      <StatusBadge size="sm" status={vessel.pilotage.status}>
+                        {vessel.pilotage.status || "—"}
+                      </StatusBadge>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Tipo de Manobra</label>
+                    <p className="text-sm">{vessel.pilotage.tipo || "—"}</p>
+                  </div>
+                  
+                  {vessel.pilotage.dataSolicitacao && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Data Solicitação</label>
+                      <p className="text-sm">{new Date(vessel.pilotage.dataSolicitacao).toLocaleString("pt-BR")}</p>
+                    </div>
+                  )}
+
+                  {vessel.pilotage.dataExecucao && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Data Execução</label>
+                      <p className="text-sm">{new Date(vessel.pilotage.dataExecucao).toLocaleString("pt-BR")}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* 5. Terminal */}
             {vessel.terminal && (
               <Card>
                 <CardHeader>
@@ -356,6 +441,20 @@ export default function PcsDetail() {
                     <label className="text-sm font-medium text-muted-foreground">Tipo Operação</label>
                     <p className="text-sm">{vessel.terminal.tipoOperacao || "—"}</p>
                   </div>
+
+                  {vessel.terminal.dataPrevistaAtracacao && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Atracação Prevista</label>
+                      <p className="text-sm">{new Date(vessel.terminal.dataPrevistaAtracacao).toLocaleString("pt-BR")}</p>
+                    </div>
+                  )}
+
+                  {vessel.terminal.dataRealAtracacao && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Atracação Real</label>
+                      <p className="text-sm">{new Date(vessel.terminal.dataRealAtracacao).toLocaleString("pt-BR")}</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
