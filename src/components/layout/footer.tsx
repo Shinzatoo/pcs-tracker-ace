@@ -7,7 +7,7 @@ export function Footer() {
       <div className="container flex h-20 items-center justify-center">
         <div className="flex items-center space-x-6 text-base text-muted-foreground">
           <span>Em colaboração com</span>
-          <img src={logoAbtra} alt="ABTRA" className="h-12" />
+          <img src={logoAbtra} alt="ABTRA" className="h-14" />
           <span>e</span>
           <img src={logoAmigu} alt="Instituto AmiGU" className="h-12" />
         </div>
