@@ -1,26 +1,12 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
-  Bell, 
   RefreshCw, 
-  Settings, 
-  Star,
-  Menu,
-  X
+  Menu
 } from "lucide-react";
 import logoApp from "@/assets/logo.png";
-import logoAbtra from "@/assets/abtra-logo.png";
-import logoAmigu from "@/assets/amigu-logo.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { usePcsRefresh } from "@/hooks/usePcsData";
 import { useFavorites } from "@/hooks/useFavorites";
@@ -30,7 +16,6 @@ const navigation = [
   { name: "Dashboard", href: "/" },
   { name: "Embarques", href: "/pcs" },
   { name: "Favoritos", href: "/favorites" },
-  { name: "Relatórios", href: "/reports" },
 ];
 
 export function Header() {
@@ -85,17 +70,9 @@ export function Header() {
             alt="PCS Maritime Logo" 
             className="h-10 w-10 transition-transform group-hover:scale-110"
           />
-          <div className="hidden sm:block">
-            <span className="font-bold text-xl bg-gradient-ocean bg-clip-text text-transparent block">
-              PCS Maritime
-            </span>
-            <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-              <span>em colaboração com</span>
-              <img src={logoAbtra} alt="ABTRA" className="h-3" />
-              <span>e</span>
-              <img src={logoAmigu} alt="Instituto AmiGU" className="h-3" />
-            </div>
-          </div>
+          <span className="hidden sm:inline-block font-bold text-xl bg-gradient-ocean bg-clip-text text-transparent">
+            PCS Maritime
+          </span>
         </Link>
 
         {/* Desktop Navigation */}
@@ -118,44 +95,6 @@ export function Header() {
             )} />
             Atualizar
           </Button>
-
-          {/* Notifications */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="relative">
-                <Bell className="h-4 w-4" />
-                <span className="absolute -top-1 -right-1 h-2 w-2 bg-destructive rounded-full" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80">
-              <DropdownMenuLabel>Notificações</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <div className="p-2 text-sm text-muted-foreground text-center">
-                Nenhuma notificação recente
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Settings */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <Settings className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Configurações</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <Star className="mr-2 h-4 w-4" />
-                Gerenciar Favoritos
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Auto-atualização
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
 
           {/* Mobile Menu */}
           <Sheet>
@@ -180,14 +119,6 @@ export function Header() {
                       isRefreshing && "animate-spin"
                     )} />
                     Atualizar Dados
-                  </Button>
-                  
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start"
-                  >
-                    <Settings className="h-4 w-4 mr-2" />
-                    Configurações
                   </Button>
                 </div>
               </div>
