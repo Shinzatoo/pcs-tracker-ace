@@ -270,37 +270,6 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Ações Rápidas</CardTitle>
-          <CardDescription>
-            Acesso direto às funcionalidades principais
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <Button variant="outline" asChild className="h-auto p-4 flex-col space-y-2">
-              <Link to="/pcs">
-                <Ship className="h-6 w-6" />
-                <span>Ver Todos os Embarques</span>
-              </Link>
-            </Button>
-            
-            <Button variant="outline" asChild className="h-auto p-4 flex-col space-y-2">
-              <Link to="/favorites">
-                <TrendingUp className="h-6 w-6" />
-                <span>Embarques Favoritos</span>
-              </Link>
-            </Button>
-            
-            <Button variant="outline" className="h-auto p-4 flex-col space-y-2">
-              <Clock className="h-6 w-6" />
-              <span>Relatórios</span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
