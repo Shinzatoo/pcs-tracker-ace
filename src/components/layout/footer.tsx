@@ -7,9 +7,23 @@ export function Footer() {
       <div className="container flex h-20 items-center justify-center">
         <div className="flex items-center space-x-6 text-base text-muted-foreground">
           <span>Em colaboração com</span>
-          <img src={logoAbtra} alt="ABTRA" className="h-14" />
+          <a 
+            href="https://www.abtra.org.br/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="transition-opacity hover:opacity-80"
+          >
+            <img src={logoAbtra} alt="ABTRA" className="h-14" />
+          </a>
           <span>e</span>
-          <img src={logoAmigu} alt="Instituto AmiGU" className="h-12" />
+          <a 
+            href="https://duckduckgo.com/?q=instituto+amigu&ia=web" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="transition-opacity hover:opacity-80"
+          >
+            <img src={logoAmigu} alt="Instituto AmiGU" className="h-12" />
+          </a>
         </div>
       </div>
     </footer>
