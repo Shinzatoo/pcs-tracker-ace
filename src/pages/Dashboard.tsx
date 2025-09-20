@@ -15,6 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { StatusOverview } from "@/components/StatusOverview";
 import { usePcsData } from "@/hooks/usePcsData";
 import { getStatusDisplay } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -143,12 +144,12 @@ export default function Dashboard() {
 
       {/* Status Overview & Recent Alerts */}
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Status Distribution */}
+        {/* Status Overview from Alerts */}
         <Card>
           <CardHeader>
-            <CardTitle>Distribuição por Status</CardTitle>
+            <CardTitle>Visão Geral dos Status dos Embarques</CardTitle>
             <CardDescription>
-              Visão geral dos status dos embarques
+              Agregação por categoria de impedimento/estado operacional
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -156,35 +157,54 @@ export default function Dashboard() {
               <div className="space-y-3">
                 {Array.from({ length: 4 }).map((_, i) => (
                   <div key={i} className="flex justify-between items-center">
-                    <div className="h-4 w-24 bg-muted animate-pulse rounded" />
-                    <div className="h-4 w-8 bg-muted animate-pulse rounded" />
+                    <div className="h-4 w-32 bg-muted animate-pulse rounded" />
+                    <div className="h-4 w-12 bg-muted animate-pulse rounded" />
                   </div>
                 ))}
               </div>
-            ) : (
+            ) : data?.alerts && data.alerts.length > 0 ? (
               <div className="space-y-3">
-                {kpis && Object.entries({
-                  ok: kpis.ok,
-                  bloqueado: kpis.blocked,
-                  pendente_autorizacao: kpis.pending,
-                }).map(([status, count]) => {
-                  const { label, variant } = getStatusDisplay(status);
-                  const percentage = kpis.total > 0 ? (count / kpis.total * 100).toFixed(1) : 0;
+                {(() => {
+                  // Aggregate alerts by type
+                  const alertCounts = data.alerts.reduce((acc, alert) => {
+                    acc[alert.type] = (acc[alert.type] || 0) + 1;
+                    return acc;
+                  }, {} as Record<string, number>);
+
+                  const total = Object.values(alertCounts).reduce((sum, count) => sum + count, 0);
                   
-                  return (
-                    <div key={status} className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <StatusBadge variant={variant as any} size="sm">
-                          {label}
-                        </StatusBadge>
+                  // Sort by count descending, then by label alphabetically
+                  const sortedEntries = Object.entries(alertCounts)
+                    .sort(([aLabel, aCount], [bLabel, bCount]) => {
+                      if (bCount !== aCount) return bCount - aCount;
+                      return aLabel.localeCompare(bLabel);
+                    });
+
+                  return sortedEntries.map(([type, count]) => {
+                    const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
+                    const displayLabel = type.replace(/([A-Z])/g, ' $1').trim();
+                    
+                    return (
+                      <div key={type} className="flex items-center justify-between p-2 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors">
+                        <div className="flex items-center space-x-2">
+                          <StatusBadge variant="blocked" size="sm">
+                            {displayLabel}
+                          </StatusBadge>
+                        </div>
+                        <div className="flex items-center space-x-2 text-sm">
+                          <span className="font-bold text-lg">{count}</span>
+                          <span className="text-muted-foreground">({percentage}%)</span>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-2 text-sm">
-                        <span className="font-medium">{count}</span>
-                        <span className="text-muted-foreground">({percentage}%)</span>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  });
+                })()}
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground py-6">
+                <CheckCircle className="h-12 w-12 mx-auto mb-2 text-success" />
+                <p>KPIs indisponíveis neste snapshot</p>
+                <p className="text-xs">Nenhum alerta agregado encontrado</p>
               </div>
             )}
           </CardContent>

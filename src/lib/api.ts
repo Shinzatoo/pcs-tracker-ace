@@ -289,9 +289,36 @@ export function getStatusDisplay(status: string): { label: string; variant: stri
     bloqueado: { label: 'Bloqueado', variant: 'destructive' },
     bloqueado_documento: { label: 'Doc. Pendente', variant: 'warning' },
     pendente_autorizacao: { label: 'Aguardando', variant: 'pending' },
-    conflito_horarios: { label: 'Conflito', variant: 'conflict' },
+    conflito_horarios: { label: 'Conflito Horários', variant: 'warning' },
     aguardando_navio: { label: 'Aguardando Navio', variant: 'waiting' },
+    autorizado: { label: 'Autorizado', variant: 'success' },
+    pendente: { label: 'Pendente', variant: 'pending' },
+    realizada: { label: 'Realizada', variant: 'success' },
+    concluida: { label: 'Concluída', variant: 'success' },
+    cancelada: { label: 'Cancelada', variant: 'destructive' },
+    negado: { label: 'Negado', variant: 'destructive' },
   };
 
-  return statusMap[status] || { label: status, variant: 'secondary' };
+  return statusMap[status] || { label: status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), variant: 'secondary' };
+}
+
+/**
+ * Parse alert summary string into counts object
+ * Example: "DataMismatch: 7 · BloqueioDocumental: 5 · AcessoPendente: 2"
+ */
+export function parseAlertSummary(summaryText: string): Record<string, number> {
+  if (!summaryText || typeof summaryText !== 'string') return {};
+  
+  const counts: Record<string, number> = {};
+  const entries = summaryText.split('·').map(s => s.trim());
+  
+  entries.forEach(entry => {
+    const match = entry.match(/^(.+?):\s*(\d+)$/);
+    if (match) {
+      const [, label, count] = match;
+      counts[label.trim()] = parseInt(count, 10);
+    }
+  });
+  
+  return counts;
 }

@@ -41,6 +41,7 @@ interface PcsFilters {
   status: string;
   source: string;
   search: string;
+  alert?: string; // New filter for alert type
 }
 
 export default function PcsList() {
@@ -52,6 +53,7 @@ export default function PcsList() {
     status: "all",
     source: "all",
     search: "",
+    alert: new URLSearchParams(window.location.search).get('alert') || undefined,
   });
   
   const [showFilters, setShowFilters] = useState(false);
@@ -89,6 +91,13 @@ export default function PcsList() {
         ].filter(Boolean).join(' ').toLowerCase();
         
         if (!searchableText.includes(searchLower)) return false;
+      }
+      
+      // Alert filter - check if vessel has alerts of specific type
+      if (filters.alert && data.alerts) {
+        const vesselAlerts = data.alerts.filter(alert => alert.vessel_id === vessel.vessel_id);
+        const hasMatchingAlert = vesselAlerts.some(alert => alert.type === filters.alert);
+        if (!hasMatchingAlert) return false;
       }
       
       return true;
@@ -316,8 +325,13 @@ export default function PcsList() {
               <div className="flex items-center space-x-2">
                 <Filter className="h-4 w-4" />
                 <span>Filtros Avançados</span>
-                {(filters.status !== "all" || filters.source !== "all" || filters.search) && (
+                {(filters.status !== "all" || filters.source !== "all" || filters.search || filters.alert) && (
                   <Badge variant="secondary">Ativos</Badge>
+                )}
+                {filters.alert && (
+                  <Badge variant="destructive">
+                    Filtrando: {filters.alert.replace(/([A-Z])/g, ' $1').trim()}
+                  </Badge>
                 )}
               </div>
             </Button>
@@ -389,12 +403,18 @@ export default function PcsList() {
               </div>
 
               {/* Clear Filters */}
-              {(filters.status !== "all" || filters.source !== "all" || filters.search) && (
+              {(filters.status !== "all" || filters.source !== "all" || filters.search || filters.alert) && (
                 <div className="flex justify-end pt-4">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setFilters({ status: "all", source: "all", search: "" })}
+                    onClick={() => {
+                      setFilters({ status: "all", source: "all", search: "", alert: undefined });
+                      // Update URL to remove alert parameter
+                      const url = new URL(window.location.href);
+                      url.searchParams.delete('alert');
+                      window.history.pushState({}, '', url.toString());
+                    }}
                   >
                     Limpar Filtros
                   </Button>
