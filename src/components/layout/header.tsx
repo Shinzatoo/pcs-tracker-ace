@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
-  Anchor, 
   Bell, 
   RefreshCw, 
   Settings, 
@@ -9,6 +8,9 @@ import {
   Menu,
   X
 } from "lucide-react";
+import logoApp from "@/assets/logo.png";
+import logoAbtra from "@/assets/abtra-logo.png";
+import logoAmigu from "@/assets/amigu-logo.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -77,13 +79,23 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center justify-between">
         {/* Logo */}
-        <Link to="/" className="flex items-center space-x-2 group">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-ocean text-primary-foreground transition-transform group-hover:scale-110">
-            <Anchor className="h-5 w-5" />
+        <Link to="/" className="flex items-center space-x-3 group">
+          <img 
+            src={logoApp} 
+            alt="PCS Maritime Logo" 
+            className="h-10 w-10 transition-transform group-hover:scale-110"
+          />
+          <div className="hidden sm:block">
+            <span className="font-bold text-xl bg-gradient-ocean bg-clip-text text-transparent block">
+              PCS Maritime
+            </span>
+            <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+              <span>em colaboração com</span>
+              <img src={logoAbtra} alt="ABTRA" className="h-3" />
+              <span>e</span>
+              <img src={logoAmigu} alt="Instituto AmiGU" className="h-3" />
+            </div>
           </div>
-          <span className="hidden font-bold sm:inline-block text-xl bg-gradient-ocean bg-clip-text text-transparent">
-            PCS Maritime
-          </span>
         </Link>
 
         {/* Desktop Navigation */}
