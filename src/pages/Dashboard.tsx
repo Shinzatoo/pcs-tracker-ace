@@ -3,9 +3,7 @@ import { Link } from "react-router-dom";
 import {
   Ship,
   AlertTriangle,
-  Clock,
   CheckCircle,
-  TrendingUp,
   ArrowRight,
   Activity,
   Users,
@@ -17,8 +15,6 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusOverview } from "@/components/StatusOverview";
 import { usePcsData } from "@/hooks/usePcsData";
-import { getStatusDisplay } from "@/lib/api";
-import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
   const { data, isLoading, error, isRefetching } = usePcsData({
@@ -163,43 +159,7 @@ export default function Dashboard() {
                 ))}
               </div>
             ) : data?.alerts && data.alerts.length > 0 ? (
-              <div className="space-y-3">
-                {(() => {
-                  // Aggregate alerts by type
-                  const alertCounts = data.alerts.reduce((acc, alert) => {
-                    acc[alert.type] = (acc[alert.type] || 0) + 1;
-                    return acc;
-                  }, {} as Record<string, number>);
-
-                  const total = Object.values(alertCounts).reduce((sum, count) => sum + count, 0);
-                  
-                  // Sort by count descending, then by label alphabetically
-                  const sortedEntries = Object.entries(alertCounts)
-                    .sort(([aLabel, aCount], [bLabel, bCount]) => {
-                      if (bCount !== aCount) return bCount - aCount;
-                      return aLabel.localeCompare(bLabel);
-                    });
-
-                  return sortedEntries.map(([type, count]) => {
-                    const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
-                    const displayLabel = type.replace(/([A-Z])/g, ' $1').trim();
-                    
-                    return (
-                      <div key={type} className="flex items-center justify-between p-2 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors">
-                        <div className="flex items-center space-x-2">
-                          <StatusBadge variant="blocked" size="sm">
-                            {displayLabel}
-                          </StatusBadge>
-                        </div>
-                        <div className="flex items-center space-x-2 text-sm">
-                          <span className="font-bold text-lg">{count}</span>
-                          <span className="text-muted-foreground">({percentage}%)</span>
-                        </div>
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
+              <StatusOverview alerts={data.alerts} />
             ) : (
               <div className="text-center text-muted-foreground py-6">
                 <CheckCircle className="h-12 w-12 mx-auto mb-2 text-success" />
