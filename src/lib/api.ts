@@ -7,6 +7,12 @@ export interface PcsApiResponse {
   vessels: Vessel[];
   alerts: Alert[];
   counts: Record<string, number>;
+  categories?: Record<string, { count: number; vessels: string[] }>;
+  kpis?: {
+    totalVessels: number;
+    totalAlerts: number;
+    totalCritical: number;
+  };
   generatedAt: string;
 }
 
@@ -194,6 +200,8 @@ class PcsApiClient {
       vessels: [],
       alerts: [],
       counts: {},
+      categories: {},
+      kpis: { totalVessels: 0, totalAlerts: 0, totalCritical: 0 },
       generatedAt: new Date().toISOString()
     };
 

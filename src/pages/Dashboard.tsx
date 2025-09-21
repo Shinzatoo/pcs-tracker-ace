@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import { StatusOverview } from "@/components/StatusOverview";
+import { CategoriesOverview } from "@/components/CategoriesOverview";
 import { usePcsData } from "@/hooks/usePcsData";
 
 export default function Dashboard() {
@@ -21,29 +21,34 @@ export default function Dashboard() {
     // Manual refresh only - no auto-refresh
   });
 
-  // Calculate KPIs
+  // Calculate KPIs - use data from webhook if available, fallback to computed
   const kpis = useMemo(() => {
     if (!data) return null;
 
-    const total = data.vessels.length;
-    const byStatus = data.vessels.reduce((acc, vessel) => {
-      const status = vessel.statusResumo;
-      acc[status] = (acc[status] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    // Use webhook KPIs if available, otherwise compute
+    const webhookKpis = data.kpis;
+    const total = webhookKpis?.totalVessels || data.vessels.length;
+    const alerts = webhookKpis?.totalAlerts || data.alerts.length;
+    const criticalAlerts = webhookKpis?.totalCritical || 
+      data.alerts.filter(a => 
+        a.type === "AcessoNegado" || 
+        a.type === "BloqueioDocumental" ||
+        (a.type === "DataMismatch" && a.fields?.deltaMin >= 45)
+      ).length;
 
-    const alerts = data.alerts.length;
-    const criticalAlerts = data.alerts.filter(a => 
-      a.type === "AcessoNegado" || a.type === "BloqueioDocumental"
-    ).length;
+    // Calculate "OK" vessels - use categories if available
+    const okFromCategories = data.categories?.["Operação normal"]?.count;
+    const okComputed = (() => {
+      const vesselsWithAlert = new Set(data.alerts.map(a => a.vessel_id));
+      return data.vessels.filter(v => !vesselsWithAlert.has(v.vessel_id)).length;
+    })();
+    const ok = okFromCategories ?? okComputed;
 
     return {
       total,
       alerts,
       criticalAlerts,
-      ok: byStatus['ok'] || 0,
-      blocked: byStatus['bloqueado'] || 0,
-      pending: byStatus['pendente_autorizacao'] || 0,
+      ok,
       sources: Object.keys(data.counts).length,
     };
   }, [data]);
@@ -120,9 +125,9 @@ export default function Dashboard() {
         />
         
         <KpiCard
-          title="Status OK"
+          title="Operação Normal"
           value={kpis?.ok || 0}
-          subtitle="Operações normais"
+          subtitle={`${kpis && kpis.total > 0 ? Math.round((kpis.ok / kpis.total) * 100) : 0}% dos navios`}
           icon={CheckCircle}
           variant="success"
           loading={isLoading}
@@ -138,18 +143,18 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Status Overview & Recent Alerts */}
+      {/* Categories Overview & Recent Alerts */}
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Status Overview from Alerts */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Visão Geral dos Status dos Embarques</CardTitle>
-            <CardDescription>
-              Agregação por categoria de impedimento/estado operacional
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
+        {/* Categories from webhook */}
+        {isLoading ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Visão Geral dos Status dos Embarques</CardTitle>
+              <CardDescription>
+                Agregação por categoria de impedimento/estado operacional
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
               <div className="space-y-3">
                 {Array.from({ length: 4 }).map((_, i) => (
                   <div key={i} className="flex justify-between items-center">
@@ -158,17 +163,11 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-            ) : data?.alerts && data.alerts.length > 0 ? (
-              <StatusOverview alerts={data.alerts} />
-            ) : (
-              <div className="text-center text-muted-foreground py-6">
-                <CheckCircle className="h-12 w-12 mx-auto mb-2 text-success" />
-                <p>KPIs indisponíveis neste snapshot</p>
-                <p className="text-xs">Nenhum alerta agregado encontrado</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ) : (
+          <CategoriesOverview categories={data?.categories || {}} />
+        )}
 
         {/* Recent Alerts */}
         <Card>
