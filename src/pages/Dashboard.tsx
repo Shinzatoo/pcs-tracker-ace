@@ -15,12 +15,19 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusOverview } from "@/components/StatusOverview";
 import { CategoriesOverview } from "@/components/CategoriesOverview";
+import { categorizeVessels } from "@/lib/categorizeVessels";
 import { usePcsData } from "@/hooks/usePcsData";
 
 export default function Dashboard() {
   const { data, isLoading, error, isRefetching } = usePcsData({
     // Manual refresh only - no auto-refresh
   });
+
+  // Calculate categories from vessels and alerts
+  const categories = useMemo(() => {
+    if (!data) return {};
+    return categorizeVessels(data.vessels, data.alerts);
+  }, [data]);
 
   // Calculate KPIs
   const kpis = useMemo(() => {
@@ -32,8 +39,8 @@ export default function Dashboard() {
       a.type === "AcessoNegado" || a.type === "BloqueioDocumental"
     ).length;
 
-    // Get "Operação normal" count from categories
-    const operacaoNormal = data.categories?.["Operação normal"]?.count || 0;
+    // Get "Operação normal" count from calculated categories
+    const operacaoNormal = categories["Operação normal"]?.count || 0;
 
     return {
       total,
@@ -42,7 +49,7 @@ export default function Dashboard() {
       operacaoNormal,
       sources: Object.keys(data.counts).length,
     };
-  }, [data]);
+  }, [data, categories]);
 
   const recentAlerts = useMemo(() => {
     if (!data) return [];
@@ -154,8 +161,8 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-            ) : data?.categories && Object.keys(data.categories).length > 0 ? (
-              <CategoriesOverview categories={data.categories} />
+            ) : categories && Object.keys(categories).length > 0 ? (
+              <CategoriesOverview categories={categories} />
             ) : (
               <div className="text-center text-muted-foreground py-6">
                 <CheckCircle className="h-12 w-12 mx-auto mb-2 text-success" />
