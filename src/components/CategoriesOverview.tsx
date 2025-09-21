@@ -2,15 +2,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { StatusBadge } from "@/components/ui/status-badge";
 import { CheckCircle } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Alert, Vessel } from "@/lib/api";
+import { categorizeVessels, VesselCategories } from "@/lib/categorizeVessels";
 
 interface CategoriesOverviewProps {
-  categories: Record<string, { count: number; vessels: string[] }>;
+  categories?: Record<string, { count: number; vessels: string[] }>;
+  vessels?: Vessel[];
+  alerts?: Alert[];
   className?: string;
 }
 
-export function CategoriesOverview({ categories, className }: CategoriesOverviewProps) {
+export function CategoriesOverview({ categories, vessels, alerts, className }: CategoriesOverviewProps) {
+  // Use provided categories or compute them from vessels and alerts
+  const computedCategories = categories || 
+    (vessels && alerts ? categorizeVessels(vessels, alerts) : {});
+  
   // Sort categories by count descending
-  const sortedCategories = Object.entries(categories)
+  const sortedCategories = Object.entries(computedCategories)
     .sort(([, a], [, b]) => b.count - a.count);
 
   if (sortedCategories.length === 0) {
@@ -42,7 +50,7 @@ export function CategoriesOverview({ categories, className }: CategoriesOverview
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="space-y-3">{/* Changed from grid to vertical list */}
           {sortedCategories.map(([category, data]) => {
             const isOperationNormal = category.toLowerCase().includes('operação normal') || 
                                     category.toLowerCase().includes('operacao normal');
@@ -65,8 +73,9 @@ export function CategoriesOverview({ categories, className }: CategoriesOverview
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {data.vessels && data.vessels.length > 0 ? (
-                      <div className="line-clamp-2">
-                        <span className="font-medium">Navios:</span> {data.vessels.join(", ")}
+                      <div>
+                        <span className="font-medium">{data.count} → </span>
+                        <span className="break-words">{data.vessels.join(", ")}</span>
                       </div>
                     ) : (
                       "—"

@@ -36,11 +36,27 @@ export default function Dashboard() {
         (a.type === "DataMismatch" && a.fields?.deltaMin >= 45)
       ).length;
 
-    // Calculate "OK" vessels - use categories if available
+    // Calculate "OK" vessels - use categories if available or compute
     const okFromCategories = data.categories?.["Operação normal"]?.count;
     const okComputed = (() => {
-      const vesselsWithAlert = new Set(data.alerts.map(a => a.vessel_id));
-      return data.vessels.filter(v => !vesselsWithAlert.has(v.vessel_id)).length;
+      if (data.categories) return 0; // If categories exist, use them
+      // Compute: vessels with only minor timing issues or no alerts with completed operations
+      const vesselsWithAlerts = new Set(data.alerts.map(a => a.vessel_id));
+      return data.vessels.filter(vessel => {
+        const vesselAlerts = data.alerts.filter(a => a.vessel_id === vessel.vessel_id);
+        const hasOnlyMinorTimingIssues = vesselAlerts.length > 0 && 
+          vesselAlerts.every(alert => 
+            alert.type === "DataMismatch" && 
+            alert.fields?.deltaMin && 
+            alert.fields.deltaMin < 45
+          );
+        const hasNoAlertsButCompleted = !vesselsWithAlerts.has(vessel.vessel_id) &&
+          vessel.authority?.status === "autorizado" &&
+          vessel.pilotage?.status === "realizada" &&
+          (vessel.terminal?.statusOperacao === "concluida" || 
+           vessel.terminal?.statusOperacao === "concluida_com_atraso");
+        return hasOnlyMinorTimingIssues || hasNoAlertsButCompleted;
+      }).length;
     })();
     const ok = okFromCategories ?? okComputed;
 
@@ -166,7 +182,11 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         ) : (
-          <CategoriesOverview categories={data?.categories || {}} />
+          <CategoriesOverview 
+            categories={data?.categories} 
+            vessels={data?.vessels}
+            alerts={data?.alerts}
+          />
         )}
 
         {/* Recent Alerts */}
