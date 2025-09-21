@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusOverview } from "@/components/StatusOverview";
+import { CategoriesOverview } from "@/components/CategoriesOverview";
 import { usePcsData } from "@/hooks/usePcsData";
 
 export default function Dashboard() {
@@ -25,25 +26,20 @@ export default function Dashboard() {
   const kpis = useMemo(() => {
     if (!data) return null;
 
-    const total = data.vessels.length;
-    const byStatus = data.vessels.reduce((acc, vessel) => {
-      const status = vessel.statusResumo;
-      acc[status] = (acc[status] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const alerts = data.alerts.length;
-    const criticalAlerts = data.alerts.filter(a => 
+    const total = data.kpis?.totalVessels || data.vessels.length;
+    const alerts = data.kpis?.totalAlerts || data.alerts.length;
+    const criticalAlerts = data.kpis?.totalCritical || data.alerts.filter(a => 
       a.type === "AcessoNegado" || a.type === "BloqueioDocumental"
     ).length;
+
+    // Get "Operação normal" count from categories
+    const operacaoNormal = data.categories?.["Operação normal"]?.count || 0;
 
     return {
       total,
       alerts,
       criticalAlerts,
-      ok: byStatus['ok'] || 0,
-      blocked: byStatus['bloqueado'] || 0,
-      pending: byStatus['pendente_autorizacao'] || 0,
+      operacaoNormal,
       sources: Object.keys(data.counts).length,
     };
   }, [data]);
@@ -120,9 +116,9 @@ export default function Dashboard() {
         />
         
         <KpiCard
-          title="Status OK"
-          value={kpis?.ok || 0}
-          subtitle="Operações normais"
+          title="Operação Normal"
+          value={kpis?.operacaoNormal || 0}
+          subtitle="Navios sem impedimentos"
           icon={CheckCircle}
           variant="success"
           loading={isLoading}
@@ -158,13 +154,13 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-            ) : data?.alerts && data.alerts.length > 0 ? (
-              <StatusOverview alerts={data.alerts} />
+            ) : data?.categories && Object.keys(data.categories).length > 0 ? (
+              <CategoriesOverview categories={data.categories} />
             ) : (
               <div className="text-center text-muted-foreground py-6">
                 <CheckCircle className="h-12 w-12 mx-auto mb-2 text-success" />
-                <p>KPIs indisponíveis neste snapshot</p>
-                <p className="text-xs">Nenhum alerta agregado encontrado</p>
+                <p>Categorias indisponíveis neste snapshot</p>
+                <p className="text-xs">Aguarde nova coleta de dados</p>
               </div>
             )}
           </CardContent>
