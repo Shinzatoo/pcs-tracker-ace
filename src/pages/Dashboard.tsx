@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import { CategoriesOverview } from "@/components/CategoriesOverview";
+import { StatusOverview } from "@/components/StatusOverview";
 import { usePcsData } from "@/hooks/usePcsData";
 
 export default function Dashboard() {
@@ -21,50 +21,29 @@ export default function Dashboard() {
     // Manual refresh only - no auto-refresh
   });
 
-  // Calculate KPIs - use data from webhook if available, fallback to computed
+  // Calculate KPIs
   const kpis = useMemo(() => {
     if (!data) return null;
 
-    // Use webhook KPIs if available, otherwise compute
-    const webhookKpis = data.kpis;
-    const total = webhookKpis?.totalVessels || data.vessels.length;
-    const alerts = webhookKpis?.totalAlerts || data.alerts.length;
-    const criticalAlerts = webhookKpis?.totalCritical || 
-      data.alerts.filter(a => 
-        a.type === "AcessoNegado" || 
-        a.type === "BloqueioDocumental" ||
-        (a.type === "DataMismatch" && a.fields?.deltaMin >= 45)
-      ).length;
+    const total = data.vessels.length;
+    const byStatus = data.vessels.reduce((acc, vessel) => {
+      const status = vessel.statusResumo;
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
 
-    // Calculate "OK" vessels - use categories if available or compute
-    const okFromCategories = data.categories?.["Operação normal"]?.count;
-    const okComputed = (() => {
-      if (data.categories) return 0; // If categories exist, use them
-      // Compute: vessels with only minor timing issues or no alerts with completed operations
-      const vesselsWithAlerts = new Set(data.alerts.map(a => a.vessel_id));
-      return data.vessels.filter(vessel => {
-        const vesselAlerts = data.alerts.filter(a => a.vessel_id === vessel.vessel_id);
-        const hasOnlyMinorTimingIssues = vesselAlerts.length > 0 && 
-          vesselAlerts.every(alert => 
-            alert.type === "DataMismatch" && 
-            alert.fields?.deltaMin && 
-            alert.fields.deltaMin < 45
-          );
-        const hasNoAlertsButCompleted = !vesselsWithAlerts.has(vessel.vessel_id) &&
-          vessel.authority?.status === "autorizado" &&
-          vessel.pilotage?.status === "realizada" &&
-          (vessel.terminal?.statusOperacao === "concluida" || 
-           vessel.terminal?.statusOperacao === "concluida_com_atraso");
-        return hasOnlyMinorTimingIssues || hasNoAlertsButCompleted;
-      }).length;
-    })();
-    const ok = okFromCategories ?? okComputed;
+    const alerts = data.alerts.length;
+    const criticalAlerts = data.alerts.filter(a => 
+      a.type === "AcessoNegado" || a.type === "BloqueioDocumental"
+    ).length;
 
     return {
       total,
       alerts,
       criticalAlerts,
-      ok,
+      ok: byStatus['ok'] || 0,
+      blocked: byStatus['bloqueado'] || 0,
+      pending: byStatus['pendente_autorizacao'] || 0,
       sources: Object.keys(data.counts).length,
     };
   }, [data]);
@@ -141,9 +120,9 @@ export default function Dashboard() {
         />
         
         <KpiCard
-          title="Operação Normal"
+          title="Status OK"
           value={kpis?.ok || 0}
-          subtitle={`${kpis && kpis.total > 0 ? Math.round((kpis.ok / kpis.total) * 100) : 0}% dos navios`}
+          subtitle="Operações normais"
           icon={CheckCircle}
           variant="success"
           loading={isLoading}
@@ -159,18 +138,18 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Categories Overview & Recent Alerts */}
+      {/* Status Overview & Recent Alerts */}
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Categories from webhook */}
-        {isLoading ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Visão Geral dos Status dos Embarques</CardTitle>
-              <CardDescription>
-                Agregação por categoria de impedimento/estado operacional
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+        {/* Status Overview from Alerts */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Visão Geral dos Status dos Embarques</CardTitle>
+            <CardDescription>
+              Agregação por categoria de impedimento/estado operacional
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
               <div className="space-y-3">
                 {Array.from({ length: 4 }).map((_, i) => (
                   <div key={i} className="flex justify-between items-center">
@@ -179,15 +158,17 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <CategoriesOverview 
-            categories={data?.categories} 
-            vessels={data?.vessels}
-            alerts={data?.alerts}
-          />
-        )}
+            ) : data?.alerts && data.alerts.length > 0 ? (
+              <StatusOverview alerts={data.alerts} />
+            ) : (
+              <div className="text-center text-muted-foreground py-6">
+                <CheckCircle className="h-12 w-12 mx-auto mb-2 text-success" />
+                <p>KPIs indisponíveis neste snapshot</p>
+                <p className="text-xs">Nenhum alerta agregado encontrado</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Recent Alerts */}
         <Card>
