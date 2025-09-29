@@ -47,23 +47,37 @@ export default function AgenteMaritimo() {
     if (!text.trim()) return;
 
     // Validate input
+    let validatedInput;
     try {
-      const validatedInput = messageSchema.parse({
+      validatedInput = messageSchema.parse({
         text: text.trim(),
         sessionId: "user-123"
       });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const errorMessage: Message = {
+          id: Date.now().toString(),
+          text: error.errors[0]?.message || "Entrada inválida.",
+          isUser: false,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, errorMessage]);
+      }
+      return;
+    }
 
-      const userMessage: Message = {
-        id: Date.now().toString(),
-        text: validatedInput.text,
-        isUser: true,
-        timestamp: new Date()
-      };
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      text: validatedInput.text,
+      isUser: true,
+      timestamp: new Date()
+    };
 
-      setMessages(prev => [...prev, userMessage]);
-      setInputValue("");
-      setIsLoading(true);
+    setMessages(prev => [...prev, userMessage]);
+    setInputValue("");
+    setIsLoading(true);
 
+    try {
       const response = await fetch('https://n8n.srv1034002.hstgr.cloud/webhook-test/"ai-agent-webhook"', {
         method: 'POST',
         headers: {
@@ -101,14 +115,33 @@ export default function AgenteMaritimo() {
       setMessages(prev => [...prev, botMessage]);
     } catch (error) {
       let errorText = "Desculpe, ocorreu um erro ao processar sua pergunta. Tente novamente.";
+      let debugInfo = "";
       
-      if (error instanceof z.ZodError) {
-        errorText = error.errors[0]?.message || "Entrada inválida.";
+      if (error instanceof Error) {
+        // Add debug information for webhook errors
+        if (error.message.includes('Falha na comunicação')) {
+          try {
+            const debugResponse = await fetch('https://n8n.srv1034002.hstgr.cloud/webhook-test/"ai-agent-webhook"', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                text: validatedInput.text,
+                sessionId: validatedInput.sessionId
+              })
+            });
+            const responseData = await debugResponse.text();
+            debugInfo = `\n\nDebug - Resposta do webhook:\n${responseData}`;
+          } catch (debugError) {
+            debugInfo = `\n\nDebug - Erro ao tentar acessar webhook: ${debugError}`;
+          }
+        }
       }
 
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: errorText,
+        text: errorText + debugInfo,
         isUser: false,
         timestamp: new Date()
       };
@@ -167,7 +200,7 @@ export default function AgenteMaritimo() {
 
         {/* Chat Interface */}
         <div className="lg:col-span-3">
-          <Card className="h-[600px] flex flex-col">
+          <Card className="h-[70vh] max-h-[600px] flex flex-col">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Bot className="h-5 w-5 text-primary" />
@@ -176,9 +209,9 @@ export default function AgenteMaritimo() {
               </CardTitle>
             </CardHeader>
             
-            <CardContent className="flex-1 flex flex-col p-0">
+            <CardContent className="flex-1 flex flex-col p-0 min-h-0">
               {/* Messages */}
-              <ScrollArea className="flex-1 p-4">
+              <ScrollArea className="flex-1 p-4 overflow-auto">
                 <div className="space-y-4">
                   {messages.map((message) => (
                     <div
@@ -210,7 +243,7 @@ export default function AgenteMaritimo() {
                               : 'bg-muted'
                           }`}
                         >
-                          <p className="text-sm whitespace-pre-wrap">{message.text}</p>
+                          <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
                           <p className="text-xs opacity-70 mt-1">
                             {message.timestamp.toLocaleTimeString()}
                           </p>
