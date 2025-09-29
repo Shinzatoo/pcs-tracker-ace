@@ -5,6 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { z } from "zod";
+
+const messageSchema = z.object({
+  text: z.string()
+    .trim()
+    .min(1, { message: "Mensagem não pode estar vazia" })
+    .max(1000, { message: "Mensagem deve ter menos de 1000 caracteres" }),
+  sessionId: z.string().min(1)
+});
 
 interface Message {
   id: string;
@@ -37,25 +46,32 @@ export default function AgenteMaritimo() {
   const sendMessage = async (text: string) => {
     if (!text.trim()) return;
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      text: text.trim(),
-      isUser: true,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setInputValue("");
-    setIsLoading(true);
-
+    // Validate input
     try {
+      const validatedInput = messageSchema.parse({
+        text: text.trim(),
+        sessionId: "user-123"
+      });
+
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        text: validatedInput.text,
+        isUser: true,
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, userMessage]);
+      setInputValue("");
+      setIsLoading(true);
+
       const response = await fetch('https://n8n.srv1034002.hstgr.cloud/webhook/ai-agent-webhook', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: text.trim()
+          text: validatedInput.text,
+          sessionId: validatedInput.sessionId
         })
       });
 
@@ -67,16 +83,22 @@ export default function AgenteMaritimo() {
       
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: data.response || data.message || "Desculpe, não consegui processar sua pergunta.",
+        text: data.response || data.message || data.text || "Desculpe, não consegui processar sua pergunta.",
         isUser: false,
         timestamp: new Date()
       };
 
       setMessages(prev => [...prev, botMessage]);
     } catch (error) {
+      let errorText = "Desculpe, ocorreu um erro ao processar sua pergunta. Tente novamente.";
+      
+      if (error instanceof z.ZodError) {
+        errorText = error.errors[0]?.message || "Entrada inválida.";
+      }
+
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: "Desculpe, ocorreu um erro ao processar sua pergunta. Tente novamente.",
+        text: errorText,
         isUser: false,
         timestamp: new Date()
       };
