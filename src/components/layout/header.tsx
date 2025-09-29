@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 
 const navigation = [
   { name: "Dashboard", href: "/" },
+  { name: "Agente Maritime", href: "/agente" },
   { name: "Embarques", href: "/pcs" },
   { name: "Favoritos", href: "/favorites" },
 ];

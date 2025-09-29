@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import Dashboard from "./pages/Dashboard";
+import AgenteMaritimo from "./pages/AgenteMaritimo";
 import PcsList from "./pages/PcsList";
 import PcsDetail from "./pages/PcsDetail";
 import Favorites from "./pages/Favorites";
@@ -24,6 +25,7 @@ const App = () => (
           <main className="flex-1 pb-8">
             <Routes>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/agente" element={<AgenteMaritimo />} />
               <Route path="/pcs" element={<PcsList />} />
               <Route path="/pcs/:vesselId" element={<PcsDetail />} />
               <Route path="/favorites" element={<Favorites />} />
