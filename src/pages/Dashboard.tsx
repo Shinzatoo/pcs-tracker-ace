@@ -14,8 +14,6 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusOverview } from "@/components/StatusOverview";
-import { CategoriesOverview } from "@/components/CategoriesOverview";
-import { categorizeVessels } from "@/lib/categorizeVessels";
 import { usePcsData } from "@/hooks/usePcsData";
 
 export default function Dashboard() {
@@ -23,33 +21,32 @@ export default function Dashboard() {
     // Manual refresh only - no auto-refresh
   });
 
-  // Calculate categories from vessels and alerts
-  const categories = useMemo(() => {
-    if (!data) return {};
-    return categorizeVessels(data.vessels, data.alerts);
-  }, [data]);
-
   // Calculate KPIs
   const kpis = useMemo(() => {
     if (!data) return null;
 
-    const total = data.kpis?.totalVessels || data.vessels.length;
-    const alerts = data.kpis?.totalAlerts || data.alerts.length;
-    const criticalAlerts = data.kpis?.totalCritical || data.alerts.filter(a => 
+    const total = data.vessels.length;
+    const byStatus = data.vessels.reduce((acc, vessel) => {
+      const status = vessel.statusResumo;
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const alerts = data.alerts.length;
+    const criticalAlerts = data.alerts.filter(a => 
       a.type === "AcessoNegado" || a.type === "BloqueioDocumental"
     ).length;
-
-    // Get "Operação normal" count from calculated categories
-    const operacaoNormal = categories["Operação normal"]?.count || 0;
 
     return {
       total,
       alerts,
       criticalAlerts,
-      operacaoNormal,
+      ok: byStatus['ok'] || 0,
+      blocked: byStatus['bloqueado'] || 0,
+      pending: byStatus['pendente_autorizacao'] || 0,
       sources: Object.keys(data.counts).length,
     };
-  }, [data, categories]);
+  }, [data]);
 
   const recentAlerts = useMemo(() => {
     if (!data) return [];
@@ -123,9 +120,9 @@ export default function Dashboard() {
         />
         
         <KpiCard
-          title="Operação Normal"
-          value={kpis?.operacaoNormal || 0}
-          subtitle="Navios sem impedimentos"
+          title="Status OK"
+          value={kpis?.ok || 0}
+          subtitle="Operações normais"
           icon={CheckCircle}
           variant="success"
           loading={isLoading}
@@ -161,13 +158,13 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-            ) : categories && Object.keys(categories).length > 0 ? (
-              <CategoriesOverview categories={categories} />
+            ) : data?.alerts && data.alerts.length > 0 ? (
+              <StatusOverview alerts={data.alerts} />
             ) : (
               <div className="text-center text-muted-foreground py-6">
                 <CheckCircle className="h-12 w-12 mx-auto mb-2 text-success" />
-                <p>Categorias indisponíveis neste snapshot</p>
-                <p className="text-xs">Aguarde nova coleta de dados</p>
+                <p>KPIs indisponíveis neste snapshot</p>
+                <p className="text-xs">Nenhum alerta agregado encontrado</p>
               </div>
             )}
           </CardContent>
