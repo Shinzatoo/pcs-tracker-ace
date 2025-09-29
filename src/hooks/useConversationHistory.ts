@@ -11,7 +11,7 @@ const STORAGE_KEY = "agente-maritimo-conversation";
 
 const welcomeMessage: Message = {
   id: "welcome",
-  text: "Olá! Sou o Agente Marítimo IA. Posso ajudá-lo com informações sobre o status dos navios e operações portuárias. Como posso ajudar?",
+  text: "Olá! Sou o Agente Maritime. Posso ajudá-lo com informações sobre o status dos navios e operações portuárias. Como posso ajudar?",
   isUser: false,
   timestamp: new Date()
 };
