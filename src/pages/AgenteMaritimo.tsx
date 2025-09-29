@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { Send, Bot, User, Loader2 } from "lucide-react";
+import { Send, Bot, User, Loader2, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { z } from "zod";
+import { useFavoriteMessages, FavoriteMessage } from "@/hooks/useFavoriteMessages";
+import { cn } from "@/lib/utils";
 
 const messageSchema = z.object({
   text: z.string()
@@ -42,6 +44,22 @@ export default function AgenteMaritimo() {
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const { addFavoriteMessage, removeFavoriteMessage, isFavorite } = useFavoriteMessages();
+
+  const handleFavoriteMessage = (message: Message) => {
+    const favoriteMessage: FavoriteMessage = {
+      id: message.id,
+      text: message.text,
+      timestamp: message.timestamp,
+      isUser: message.isUser
+    };
+
+    if (isFavorite(message.id)) {
+      removeFavoriteMessage(message.id);
+    } else {
+      addFavoriteMessage(favoriteMessage);
+    }
+  };
 
   const sendMessage = async (text: string) => {
     if (!text.trim()) return;
@@ -78,7 +96,7 @@ export default function AgenteMaritimo() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('https://n8n.srv1034002.hstgr.cloud/webhook-test/"ai-agent-webhook"', {
+      const response = await fetch('https://n8n.srv1034002.hstgr.cloud/webhook/"ai-agent-webhook"', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -127,7 +145,7 @@ export default function AgenteMaritimo() {
         // Add debug information for webhook errors
         if (error.message.includes('Falha na comunicação')) {
           try {
-            const debugResponse = await fetch('https://n8n.srv1034002.hstgr.cloud/webhook-test/"ai-agent-webhook"', {
+            const debugResponse = await fetch('https://n8n.srv1034002.hstgr.cloud/webhook/"ai-agent-webhook"', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -249,7 +267,22 @@ export default function AgenteMaritimo() {
                               : 'bg-muted'
                           }`}
                         >
-                          <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
+                          <div className="flex items-start justify-between">
+                            <p className="text-sm whitespace-pre-wrap break-words flex-1">{message.text}</p>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="ml-2 h-6 w-6 p-0 opacity-60 hover:opacity-100"
+                              onClick={() => handleFavoriteMessage(message)}
+                            >
+                              <Heart 
+                                className={cn(
+                                  "h-3 w-3",
+                                  isFavorite(message.id) ? "fill-red-500 text-red-500" : "text-muted-foreground"
+                                )} 
+                              />
+                            </Button>
+                          </div>
                           <p className="text-xs opacity-70 mt-1">
                             {message.timestamp.toLocaleTimeString()}
                           </p>
