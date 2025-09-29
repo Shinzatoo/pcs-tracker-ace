@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { usePcsRefresh } from "@/hooks/usePcsData";
 import { useFavorites } from "@/hooks/useFavorites";
-import { useFavoriteMessages } from "@/hooks/useFavoriteMessages";
 import { cn } from "@/lib/utils";
 
 const navigation = [
@@ -24,7 +23,6 @@ export function Header() {
   const location = useLocation();
   const { refresh } = usePcsRefresh();
   const { favoritesCount } = useFavorites();
-  const { favoritesCount: messagesFavoritesCount } = useFavoriteMessages();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = async () => {
@@ -52,21 +50,10 @@ export function Header() {
         >
           <div className="flex items-center space-x-2">
             <span>{item.name}</span>
-            {item.href === "/favorites" && (favoritesCount > 0 || messagesFavoritesCount > 0) && (
-              <div className="flex items-center space-x-1">
-                {favoritesCount > 0 && (
-                  <Badge variant="secondary" className="text-xs flex items-center space-x-1">
-                    <span>📄</span>
-                    <span>{favoritesCount}</span>
-                  </Badge>
-                )}
-                {messagesFavoritesCount > 0 && (
-                  <Badge variant="secondary" className="text-xs flex items-center space-x-1">
-                    <span>📝</span>
-                    <span>{messagesFavoritesCount}</span>
-                  </Badge>
-                )}
-              </div>
+            {item.href === "/favorites" && favoritesCount > 0 && (
+              <Badge variant="secondary" className="text-xs">
+                {favoritesCount}
+              </Badge>
             )}
           </div>
         </Link>

@@ -8,9 +8,6 @@ import {
   Copy,
   Heart,
   Ship,
-  Notebook,
-  Bot,
-  User,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -19,10 +16,6 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,7 +29,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useFavorites, FavoriteVessel } from "@/hooks/useFavorites";
-import { useFavoriteMessages } from "@/hooks/useFavoriteMessages";
 import { usePcsData } from "@/hooks/usePcsData";
 import { getStatusDisplay } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -50,12 +42,6 @@ export default function Favorites() {
     clearFavorites, 
     loading: favoritesLoading 
   } = useFavorites();
-  
-  const { 
-    favoriteMessages, 
-    removeFavoriteMessage, 
-    favoritesCount: messagesFavoritesCount 
-  } = useFavoriteMessages();
 
   // Fetch current data to get latest vessel info
   const { data: pcsData } = usePcsData();
@@ -244,274 +230,197 @@ export default function Favorites() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center space-x-2">
             <Heart className="h-7 w-7 text-red-500" />
-            <span>Favoritos</span>
+            <span>Embarques Favoritos</span>
           </h1>
           <p className="text-muted-foreground">
-            Seus navios e mensagens favoritas
+            Seus navios marcados para acompanhamento rápido
           </p>
         </div>
         
         <div className="flex items-center space-x-2">
-          <Badge variant="outline" className="text-sm flex items-center space-x-1">
-            <span>📄</span>
-            <span>{favorites.length}</span>
+          <Badge variant="outline" className="text-sm">
+            {favorites.length} favorito{favorites.length !== 1 ? "s" : ""}
           </Badge>
-          <Badge variant="outline" className="text-sm flex items-center space-x-1">
-            <span>📝</span>
-            <span>{messagesFavoritesCount}</span>
-          </Badge>
+          
+          {favorites.length > 0 && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Limpar Todos
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Limpar todos os favoritos?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Todos os {favorites.length} navios favoritos serão removidos.
+                    Esta ação não pode ser desfeita.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      clearFavorites();
+                      toast({
+                        title: "Favoritos limpos",
+                        description: "Todos os favoritos foram removidos",
+                      });
+                    }}
+                  >
+                    Limpar Todos
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
       </div>
 
-      <Tabs defaultValue="vessels" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="vessels" className="flex items-center space-x-2">
-            <Ship className="h-4 w-4" />
-            <span>Navios Favoritos</span>
-          </TabsTrigger>
-          <TabsTrigger value="messages" className="flex items-center space-x-2">
-            <Notebook className="h-4 w-4" />
-            <span>Notepad de Mensagens</span>
-          </TabsTrigger>
-        </TabsList>
+      {/* Status Summary */}
+      {enrichedFavorites.length > 0 && (
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <div className="h-2 w-2 rounded-full bg-green-500" />
+                <div>
+                  <p className="text-sm font-medium">Online</p>
+                  <p className="text-2xl font-bold">
+                    {enrichedFavorites.filter(f => f.isOnline).length}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <div className="h-2 w-2 rounded-full bg-gray-400" />
+                <div>
+                  <p className="text-sm font-medium">Offline</p>
+                  <p className="text-2xl font-bold">
+                    {enrichedFavorites.filter(f => !f.isOnline).length}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <div className="h-2 w-2 rounded-full bg-green-500" />
+                <div>
+                  <p className="text-sm font-medium">Status OK</p>
+                  <p className="text-2xl font-bold">
+                    {enrichedFavorites.filter(f => f.currentStatus === 'ok').length}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <div className="h-2 w-2 rounded-full bg-red-500" />
+                <div>
+                  <p className="text-sm font-medium">Com Alertas</p>
+                  <p className="text-2xl font-bold">
+                    {enrichedFavorites.filter(f => 
+                      f.currentStatus && !f.currentStatus.includes('ok')
+                    ).length}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
-        <TabsContent value="vessels" className="space-y-6">
-          {/* Status Summary */}
-          {enrichedFavorites.length > 0 && (
-            <div className="grid gap-4 md:grid-cols-4">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="h-2 w-2 rounded-full bg-green-500" />
-                    <div>
-                      <p className="text-sm font-medium">Online</p>
-                      <p className="text-2xl font-bold">
-                        {enrichedFavorites.filter(f => f.isOnline).length}
-                      </p>
-                    </div>
+      {/* Favorites Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Lista de Favoritos</CardTitle>
+          <CardDescription>
+            Clique em uma linha para ver detalhes do navio
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {enrichedFavorites.length === 0 ? (
+            <EmptyState
+              variant="default"
+              title="Nenhum favorito ainda"
+              description="Comece adicionando navios aos seus favoritos na lista de embarques para acompanhamento rápido."
+              action={{
+                label: "Explorar Embarques",
+                onClick: () => navigate("/pcs"),
+              }}
+            />
+          ) : (
+            <DataTable
+              columns={columns}
+              data={enrichedFavorites}
+              searchPlaceholder="Buscar favoritos..."
+              searchColumn="vessel_id"
+              onRowClick={handleRowClick}
+              emptyMessage="Nenhum favorito encontrado"
+              enableRowSelection={false}
+            />
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Quick Actions */}
+      {favorites.length === 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Como usar os favoritos</CardTitle>
+            <CardDescription>
+              Marque navios como favoritos para acompanhamento rápido
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10">
+                    <span className="text-sm font-bold text-primary">1</span>
                   </div>
-                </CardContent>
-              </Card>
+                  <span className="text-sm">Vá para a lista de embarques</span>
+                </div>
+                <p className="text-xs text-muted-foreground ml-8">
+                  Navegue pelos navios disponíveis no sistema
+                </p>
+              </div>
               
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="h-2 w-2 rounded-full bg-gray-400" />
-                    <div>
-                      <p className="text-sm font-medium">Offline</p>
-                      <p className="text-2xl font-bold">
-                        {enrichedFavorites.filter(f => !f.isOnline).length}
-                      </p>
-                    </div>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10">
+                    <span className="text-sm font-bold text-primary">2</span>
                   </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="h-2 w-2 rounded-full bg-green-500" />
-                    <div>
-                      <p className="text-sm font-medium">Status OK</p>
-                      <p className="text-2xl font-bold">
-                        {enrichedFavorites.filter(f => f.currentStatus === 'ok').length}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="h-2 w-2 rounded-full bg-red-500" />
-                    <div>
-                      <p className="text-sm font-medium">Com Alertas</p>
-                      <p className="text-2xl font-bold">
-                        {enrichedFavorites.filter(f => 
-                          f.currentStatus && !f.currentStatus.includes('ok')
-                        ).length}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  <span className="text-sm">Clique na estrela ao lado do ID</span>
+                </div>
+                <p className="text-xs text-muted-foreground ml-8">
+                  Marque os navios que deseja acompanhar
+                </p>
+              </div>
             </div>
-          )}
-
-          {/* Favorites Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Lista de Favoritos</CardTitle>
-              <CardDescription>
-                Clique em uma linha para ver detalhes do navio
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {enrichedFavorites.length === 0 ? (
-                <EmptyState
-                  variant="default"
-                  title="Nenhum favorito ainda"
-                  description="Comece adicionando navios aos seus favoritos na lista de embarques para acompanhamento rápido."
-                  action={{
-                    label: "Explorar Embarques",
-                    onClick: () => navigate("/pcs"),
-                  }}
-                />
-              ) : (
-                <DataTable
-                  columns={columns}
-                  data={enrichedFavorites}
-                  searchPlaceholder="Buscar favoritos..."
-                  searchColumn="vessel_id"
-                  onRowClick={handleRowClick}
-                  emptyMessage="Nenhum favorito encontrado"
-                  enableRowSelection={false}
-                />
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Quick Actions */}
-          {favorites.length === 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Como usar os favoritos</CardTitle>
-                <CardDescription>
-                  Marque navios como favoritos para acompanhamento rápido
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10">
-                        <span className="text-sm font-bold text-primary">1</span>
-                      </div>
-                      <span className="text-sm">Vá para a lista de embarques</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground ml-8">
-                      Navegue pelos navios disponíveis no sistema
-                    </p>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10">
-                        <span className="text-sm font-bold text-primary">2</span>
-                      </div>
-                      <span className="text-sm">Clique na estrela ao lado do ID</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground ml-8">
-                      Marque os navios que deseja acompanhar
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="mt-6">
-                  <Button asChild>
-                    <Link to="/pcs" className="flex items-center">
-                      <Ship className="mr-2 h-4 w-4" />
-                      Ver Todos os Embarques
-                    </Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="messages" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Notebook className="h-5 w-5" />
-                <span>Notepad de Mensagens</span>
-              </CardTitle>
-              <CardDescription>
-                Suas mensagens favoritas do Agente Marítimo IA
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {favoriteMessages.length === 0 ? (
-                <EmptyState
-                  variant="default"
-                  title="Nenhuma mensagem favorita"
-                  description="Favorite mensagens importantes do Agente Marítimo IA clicando no coração ao lado das mensagens."
-                  action={{
-                    label: "Ir para o Agente IA",
-                    onClick: () => navigate("/agente"),
-                  }}
-                />
-              ) : (
-                <ScrollArea className="h-[600px] w-full">
-                  <div className="space-y-4">
-                    {favoriteMessages.map((message, index) => (
-                      <div key={message.id} className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
-                              message.isUser 
-                                ? 'bg-primary text-primary-foreground' 
-                                : 'bg-muted'
-                            }`}>
-                              {message.isUser ? (
-                                <User className="h-3 w-3" />
-                              ) : (
-                                <Bot className="h-3 w-3" />
-                              )}
-                            </div>
-                            <span className="text-sm font-medium">
-                              {message.isUser ? 'Você' : 'Agente IA'}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {message.timestamp.toLocaleString('pt-BR')}
-                            </span>
-                          </div>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <Trash2 className="h-3 w-3 text-destructive" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Remover mensagem?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Esta mensagem será removida dos seus favoritos.
-                                  Esta ação não pode ser desfeita.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => {
-                                    removeFavoriteMessage(message.id);
-                                    toast({
-                                      title: "Mensagem removida",
-                                      description: "A mensagem foi removida dos favoritos",
-                                    });
-                                  }}
-                                >
-                                  Remover
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                        <div className="bg-muted/50 rounded-lg p-3">
-                          <p className="text-sm whitespace-pre-wrap">{message.text}</p>
-                        </div>
-                        {index < favoriteMessages.length - 1 && <Separator />}
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            
+            <div className="mt-6">
+              <Button asChild>
+                <Link to="/pcs" className="flex items-center">
+                  <Ship className="mr-2 h-4 w-4" />
+                  Ver Todos os Embarques
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
