@@ -98,10 +98,16 @@ export default function AgenteMaritimo() {
       // Extract text from the response structure
       let responseText = "Desculpe, não consegui processar sua pergunta.";
       
-      if (Array.isArray(data) && data.length > 0) {
-        const firstItem = data[0];
-        if (firstItem.outputs && Array.isArray(firstItem.outputs) && firstItem.outputs.length > 0) {
-          responseText = firstItem.outputs[0];
+      if (Array.isArray(data)) {
+        if (data.length > 0) {
+          // Check if it's the new simplified format: ["message text"]
+          if (typeof data[0] === 'string') {
+            responseText = data[0];
+          }
+          // Check if it's the old complex format with outputs
+          else if (data[0].outputs && Array.isArray(data[0].outputs) && data[0].outputs.length > 0) {
+            responseText = data[0].outputs[0];
+          }
         }
       }
       
