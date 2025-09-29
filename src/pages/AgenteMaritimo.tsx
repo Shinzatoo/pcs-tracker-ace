@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Send, Bot, User, Loader2 } from "lucide-react";
+import { Send, Bot, User, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { z } from "zod";
+import { useConversationHistory } from "@/hooks/useConversationHistory";
 
 const messageSchema = z.object({
   text: z.string()
@@ -32,14 +33,7 @@ const predefinedQuestions = [
 ];
 
 export default function AgenteMaritimo() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      text: "Olá! Sou o Agente Marítimo IA. Posso ajudá-lo com informações sobre o status dos navios e operações portuárias. Como posso ajudar?",
-      isUser: false,
-      timestamp: new Date()
-    }
-  ]);
+  const { messages, setMessages, clearHistory } = useConversationHistory();
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -193,10 +187,21 @@ export default function AgenteMaritimo() {
         <div className="lg:col-span-3">
           <Card className="h-[70vh] max-h-[600px] flex flex-col">
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Bot className="h-5 w-5 text-primary" />
-                <span>Conversa com o Agente</span>
-                {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Bot className="h-5 w-5 text-primary" />
+                  <span>Conversa com o Agente</span>
+                  {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearHistory}
+                  disabled={isLoading}
+                  title="Limpar histórico"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </CardTitle>
             </CardHeader>
             
