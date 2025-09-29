@@ -96,7 +96,7 @@ export default function AgenteMaritimo() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('https://n8n.srv1034002.hstgr.cloud/webhook/ai-agent-webhook', {
+      const response = await fetch('https://n8n.srv1034002.hstgr.cloud/webhook/"ai-agent-webhook"', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -113,11 +113,20 @@ export default function AgenteMaritimo() {
 
       const data = await response.json();
       
-      // Extract text from the response structure - simplified format: ["message text"]
+      // Extract text from the response structure
       let responseText = "Desculpe, não consegui processar sua pergunta.";
       
-      if (Array.isArray(data) && data.length > 0 && typeof data[0] === 'string') {
-        responseText = data[0];
+      if (Array.isArray(data)) {
+        if (data.length > 0) {
+          // Check if it's the new simplified format: ["message text"]
+          if (typeof data[0] === 'string') {
+            responseText = data[0];
+          }
+          // Check if it's the old complex format with outputs
+          else if (data[0].outputs && Array.isArray(data[0].outputs) && data[0].outputs.length > 0) {
+            responseText = data[0].outputs[0];
+          }
+        }
       }
       
       const botMessage: Message = {
@@ -136,7 +145,7 @@ export default function AgenteMaritimo() {
         // Add debug information for webhook errors
         if (error.message.includes('Falha na comunicação')) {
           try {
-            const debugResponse = await fetch('https://n8n.srv1034002.hstgr.cloud/webhook/ai-agent-webhook', {
+            const debugResponse = await fetch('https://n8n.srv1034002.hstgr.cloud/webhook/"ai-agent-webhook"', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
