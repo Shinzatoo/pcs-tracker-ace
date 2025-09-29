@@ -149,7 +149,7 @@ export default function AgenteMaritimo() {
     <div className="container mx-auto p-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold bg-gradient-ocean bg-clip-text text-transparent mb-2">
-          Agente Marítimo IA
+          Agente Maritime
         </h1>
         <p className="text-muted-foreground">
           Assistente virtual especializado em operações portuárias e status de embarques
