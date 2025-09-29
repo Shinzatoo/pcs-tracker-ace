@@ -81,9 +81,19 @@ export default function AgenteMaritimo() {
 
       const data = await response.json();
       
+      // Extract text from the response structure
+      let responseText = "Desculpe, não consegui processar sua pergunta.";
+      
+      if (Array.isArray(data) && data.length > 0) {
+        const firstItem = data[0];
+        if (firstItem.outputs && Array.isArray(firstItem.outputs) && firstItem.outputs.length > 0) {
+          responseText = firstItem.outputs[0];
+        }
+      }
+      
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: data.response || data.message || data.text || "Desculpe, não consegui processar sua pergunta.",
+        text: responseText,
         isUser: false,
         timestamp: new Date()
       };
