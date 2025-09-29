@@ -78,7 +78,7 @@ export default function AgenteMaritimo() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('https://n8n.srv1034002.hstgr.cloud/webhook-test/"ai-agent-webhook"', {
+      const response = await fetch('https://n8n.srv1034002.hstgr.cloud/webhook/"ai-agent-webhook"', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -127,7 +127,7 @@ export default function AgenteMaritimo() {
         // Add debug information for webhook errors
         if (error.message.includes('Falha na comunicação')) {
           try {
-            const debugResponse = await fetch('https://n8n.srv1034002.hstgr.cloud/webhook-test/"ai-agent-webhook"', {
+            const debugResponse = await fetch('https://n8n.srv1034002.hstgr.cloud/webhook/"ai-agent-webhook"', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
