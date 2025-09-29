@@ -93,23 +93,8 @@ export default function AgenteMaritimo() {
         throw new Error('Falha na comunicação com o agente');
       }
 
-      const data = await response.json();
-      
-      // Extract text from the response structure
-      let responseText = "Desculpe, não consegui processar sua pergunta.";
-      
-      if (Array.isArray(data)) {
-        if (data.length > 0) {
-          // Check if it's the new simplified format: ["message text"]
-          if (typeof data[0] === 'string') {
-            responseText = data[0];
-          }
-          // Check if it's the old complex format with outputs
-          else if (data[0].outputs && Array.isArray(data[0].outputs) && data[0].outputs.length > 0) {
-            responseText = data[0].outputs[0];
-          }
-        }
-      }
+      // The webhook is returning plain text, not JSON
+      const responseText = await response.text();
       
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
