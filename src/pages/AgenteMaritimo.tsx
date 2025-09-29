@@ -64,7 +64,7 @@ export default function AgenteMaritimo() {
       setInputValue("");
       setIsLoading(true);
 
-      const response = await fetch('https://n8n.srv1034002.hstgr.cloud/webhook/ai-agent-webhook', {
+      const response = await fetch('https://n8n.srv1034002.hstgr.cloud/webhook-test/"ai-agent-webhook""', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
