@@ -44,7 +44,7 @@ export default function MaritimeVoice() {
       </div>
 
       {/* Header Section */}
-      <div className="text-center mb-8 space-y-4 animate-fade-in relative z-10">
+      <div className="text-center mb-20 space-y-4 animate-fade-in relative z-10">
         <div className="inline-block relative">
           {/* Glow Effect */}
           <div className="absolute -inset-4 bg-gradient-ocean blur-2xl opacity-30 animate-pulse" />
@@ -66,7 +66,10 @@ export default function MaritimeVoice() {
             </div>
           </div>
         </div>
+      </div>
 
+      {/* Description and Status - Pushed down */}
+      <div className="text-center mb-12 space-y-6 animate-fade-in relative z-10" style={{ animationDelay: '0.2s' }}>
         <p className="text-muted-foreground text-lg max-w-2xl mx-auto leading-relaxed">
           Interaja com o Maritime através de voz. Faça perguntas sobre operações de navios, status portuário e cronogramas de embarque.
         </p>
