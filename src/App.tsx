@@ -7,6 +7,7 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import Dashboard from "./pages/Dashboard";
 import AgenteMaritimo from "./pages/AgenteMaritimo";
+import MaritimeVoice from "./pages/MaritimeVoice";
 import PcsList from "./pages/PcsList";
 import PcsDetail from "./pages/PcsDetail";
 import Favorites from "./pages/Favorites";
@@ -26,6 +27,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/agente" element={<AgenteMaritimo />} />
+              <Route path="/voice" element={<MaritimeVoice />} />
               <Route path="/pcs" element={<PcsList />} />
               <Route path="/pcs/:vesselId" element={<PcsDetail />} />
               <Route path="/favorites" element={<Favorites />} />
