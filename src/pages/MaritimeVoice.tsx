@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Card } from "@/components/ui/card";
+import { Mic, Waves, Sparkles } from "lucide-react";
 
 export default function MaritimeVoice() {
   useEffect(() => {
@@ -16,27 +17,100 @@ export default function MaritimeVoice() {
   }, []);
 
   return (
-    <div className="container mx-auto p-6 min-h-[calc(100vh-8rem)] flex flex-col items-center justify-center">
+    <div className="container mx-auto p-6 min-h-[calc(100vh-8rem)] flex flex-col items-center justify-center relative overflow-hidden">
+      {/* Animated Background Grid */}
+      <div className="absolute inset-0 pointer-events-none opacity-20">
+        <div className="absolute inset-0" style={{
+          backgroundImage: 'linear-gradient(hsl(var(--primary) / 0.1) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary) / 0.1) 1px, transparent 1px)',
+          backgroundSize: '50px 50px',
+          animation: 'grid-flow 20s linear infinite'
+        }} />
+      </div>
+
+      {/* Floating Particles */}
+      <div className="absolute inset-0 pointer-events-none">
+        {[...Array(6)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute w-2 h-2 bg-primary/30 rounded-full blur-sm"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animation: `float ${3 + Math.random() * 4}s ease-in-out infinite`,
+              animationDelay: `${Math.random() * 2}s`
+            }}
+          />
+        ))}
+      </div>
+
       {/* Header Section */}
-      <div className="text-center mb-12 space-y-4 animate-fade-in">
-        <div className="inline-block">
-          <h1 className="text-5xl font-bold bg-gradient-ocean bg-clip-text text-transparent mb-3">
-            Maritime Voice
-          </h1>
-          <div className="h-1 w-32 mx-auto bg-gradient-ocean rounded-full animate-pulse" />
+      <div className="text-center mb-12 space-y-6 animate-fade-in relative z-10">
+        <div className="inline-block relative">
+          {/* Glow Effect */}
+          <div className="absolute -inset-4 bg-gradient-ocean blur-2xl opacity-30 animate-pulse" />
+          
+          <div className="relative">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <Waves className="w-8 h-8 text-primary animate-pulse" />
+              <h1 className="text-6xl font-bold bg-gradient-ocean bg-clip-text text-transparent tracking-tight">
+                Maritime Voice
+              </h1>
+              <Sparkles className="w-8 h-8 text-primary animate-pulse" style={{ animationDelay: '0.5s' }} />
+            </div>
+            
+            {/* Animated Underline */}
+            <div className="flex items-center justify-center gap-2">
+              <div className="h-0.5 w-20 bg-gradient-to-r from-transparent via-primary to-transparent animate-pulse" />
+              <div className="h-1 w-12 bg-gradient-ocean rounded-full" />
+              <div className="h-0.5 w-20 bg-gradient-to-r from-transparent via-primary to-transparent animate-pulse" />
+            </div>
+          </div>
         </div>
-        <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-          Interact with Maritime through voice. Ask questions about vessel operations, port status, and shipping schedules.
+
+        <p className="text-muted-foreground text-lg max-w-2xl mx-auto leading-relaxed">
+          Interaja com o Maritime através de voz. Faça perguntas sobre operações de navios, status portuário e cronogramas de embarque.
         </p>
+
+        {/* Tech Stats */}
+        <div className="flex items-center justify-center gap-6 text-sm">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            <span className="text-muted-foreground">IA Ativa</span>
+          </div>
+          <div className="h-4 w-px bg-border" />
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.3s' }} />
+            <span className="text-muted-foreground">Português BR</span>
+          </div>
+          <div className="h-4 w-px bg-border" />
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" style={{ animationDelay: '0.6s' }} />
+            <span className="text-muted-foreground">Tempo Real</span>
+          </div>
+        </div>
       </div>
 
       {/* Voice Interface Card */}
-      <Card className="w-full max-w-4xl bg-card/50 backdrop-blur-sm border-primary/20 shadow-xl animate-scale-in">
-        <div className="p-8">
-          {/* Status Indicator */}
-          <div className="flex items-center justify-center mb-6 space-x-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-sm text-muted-foreground">AI Agent Ready</span>
+      <Card className="w-full max-w-4xl bg-card/30 backdrop-blur-xl border-primary/30 shadow-2xl animate-scale-in relative z-10 overflow-hidden">
+        {/* Animated Border Glow */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute inset-0 rounded-lg bg-gradient-ocean opacity-20 blur-xl animate-pulse" />
+          <div className="absolute inset-[1px] rounded-lg bg-card/90" />
+        </div>
+
+        <div className="relative p-8">
+          {/* Header with Icon */}
+          <div className="flex items-center justify-center mb-6 gap-3">
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
+              <div className="relative w-12 h-12 rounded-full bg-gradient-ocean flex items-center justify-center">
+                <Mic className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-foreground">Assistente de Voz</h2>
+              <p className="text-xs text-muted-foreground">Powered by ElevenLabs</p>
+            </div>
           </div>
 
           {/* ElevenLabs Widget Container */}
@@ -49,34 +123,43 @@ export default function MaritimeVoice() {
             
             {/* Decorative Elements */}
             <div className="absolute inset-0 pointer-events-none">
-              <div className="absolute top-0 left-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl animate-pulse" />
-              <div className="absolute bottom-0 right-0 w-40 h-40 bg-accent/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+              <div className="absolute top-0 left-0 w-40 h-40 bg-primary/10 rounded-full blur-3xl animate-pulse" />
+              <div className="absolute bottom-0 right-0 w-48 h-48 bg-accent/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-primary/5 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '0.5s' }} />
             </div>
           </div>
 
           {/* Instructions */}
-          <div className="mt-8 pt-6 border-t border-border/50">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-              <div className="space-y-2">
-                <div className="w-12 h-12 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
+          <div className="mt-8 pt-6 border-t border-primary/20">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="group space-y-3 p-4 rounded-lg bg-gradient-to-br from-primary/5 to-transparent hover:from-primary/10 transition-all">
+                <div className="w-14 h-14 mx-auto rounded-full bg-gradient-ocean flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                   <span className="text-2xl">🎤</span>
                 </div>
-                <h3 className="font-medium text-sm">Click to Speak</h3>
-                <p className="text-xs text-muted-foreground">Press the button and speak your query</p>
+                <h3 className="font-semibold text-center">Clique para Falar</h3>
+                <p className="text-xs text-muted-foreground text-center leading-relaxed">
+                  Pressione o botão e fale sua pergunta em voz alta
+                </p>
               </div>
-              <div className="space-y-2">
-                <div className="w-12 h-12 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
+              
+              <div className="group space-y-3 p-4 rounded-lg bg-gradient-to-br from-accent/5 to-transparent hover:from-accent/10 transition-all">
+                <div className="w-14 h-14 mx-auto rounded-full bg-gradient-to-br from-accent to-accent/50 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                   <span className="text-2xl">🤖</span>
                 </div>
-                <h3 className="font-medium text-sm">AI Processing</h3>
-                <p className="text-xs text-muted-foreground">Maritime analyzes your request</p>
+                <h3 className="font-semibold text-center">Processamento IA</h3>
+                <p className="text-xs text-muted-foreground text-center leading-relaxed">
+                  Maritime analisa sua solicitação em tempo real
+                </p>
               </div>
-              <div className="space-y-2">
-                <div className="w-12 h-12 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
+              
+              <div className="group space-y-3 p-4 rounded-lg bg-gradient-to-br from-primary/5 to-transparent hover:from-primary/10 transition-all">
+                <div className="w-14 h-14 mx-auto rounded-full bg-gradient-ocean flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                   <span className="text-2xl">🔊</span>
                 </div>
-                <h3 className="font-medium text-sm">Voice Response</h3>
-                <p className="text-xs text-muted-foreground">Listen to the answer</p>
+                <h3 className="font-semibold text-center">Resposta em Voz</h3>
+                <p className="text-xs text-muted-foreground text-center leading-relaxed">
+                  Ouça a resposta em áudio natural e claro
+                </p>
               </div>
             </div>
           </div>
@@ -84,9 +167,27 @@ export default function MaritimeVoice() {
       </Card>
 
       {/* Footer Info */}
-      <div className="mt-8 text-center text-xs text-muted-foreground animate-fade-in" style={{ animationDelay: '0.3s' }}>
-        <p>Powered by ElevenLabs AI • Maritime Voice Assistant</p>
+      <div className="mt-8 flex items-center gap-4 text-xs text-muted-foreground animate-fade-in relative z-10" style={{ animationDelay: '0.3s' }}>
+        <div className="flex items-center gap-2">
+          <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+          <span>Sistema Online</span>
+        </div>
+        <span className="text-border">•</span>
+        <span>ElevenLabs AI Technology</span>
+        <span className="text-border">•</span>
+        <span>Maritime Voice Assistant v2.0</span>
       </div>
+
+      <style>{`
+        @keyframes grid-flow {
+          0% { transform: translate(0, 0); }
+          100% { transform: translate(50px, 50px); }
+        }
+        @keyframes float {
+          0%, 100% { transform: translateY(0px) translateX(0px); }
+          50% { transform: translateY(-20px) translateX(10px); }
+        }
+      `}</style>
     </div>
   );
 }
