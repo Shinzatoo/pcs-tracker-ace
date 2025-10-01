@@ -55,7 +55,7 @@ export default function MaritimeVoice() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center relative">
       {/* Ambient grid background */}
       <div className="absolute inset-0 opacity-20" style={{
         backgroundImage: 'radial-gradient(circle at center, hsl(var(--primary) / 0.15) 1px, transparent 1px)',
@@ -194,7 +194,7 @@ export default function MaritimeVoice() {
           {/* Multi-layered central orb with gradient */}
           <div className="absolute w-64 h-64 rounded-full" style={{
             background: `
-              radial-gradient(circle at 45% 45%, hsl(var(--accent) / 0.6) 0%, transparent 50%),
+              radial-gradient(circle at 45% 45%, hsl(var(--primary) / 0.6) 0%, transparent 50%),
               radial-gradient(circle at center, hsl(var(--primary) / 0.4) 0%, transparent 70%)
             `,
             boxShadow: isActive 
@@ -242,8 +242,8 @@ export default function MaritimeVoice() {
             </div>
           </div>
 
-          {/* Hidden ElevenLabs widget - still functional */}
-          <div className="absolute opacity-0 pointer-events-auto" 
+          {/* ElevenLabs widget */}
+          <div className="absolute mt-32" 
                dangerouslySetInnerHTML={{ 
                  __html: '<elevenlabs-convai agent-id="agent_6401k6ckrp19e26rkg2qzpzsrwna"></elevenlabs-convai>' 
                }} 
