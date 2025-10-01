@@ -17,9 +17,9 @@ export default function MaritimeVoice() {
   }, []);
 
   return (
-    <div className="container mx-auto p-6 min-h-[calc(100vh-8rem)] flex flex-col items-center justify-center relative overflow-hidden">
-      {/* Animated Background Grid */}
-      <div className="absolute inset-0 pointer-events-none opacity-20">
+    <div className="container mx-auto p-6 min-h-[calc(100vh-8rem)] flex flex-col items-center justify-start pt-12 relative overflow-hidden">
+      {/* Animated Background Grid - Lower positioning */}
+      <div className="absolute bottom-0 left-0 right-0 h-[60vh] pointer-events-none opacity-20">
         <div className="absolute inset-0" style={{
           backgroundImage: 'linear-gradient(hsl(var(--primary) / 0.1) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary) / 0.1) 1px, transparent 1px)',
           backgroundSize: '50px 50px',
@@ -27,15 +27,15 @@ export default function MaritimeVoice() {
         }} />
       </div>
 
-      {/* Floating Particles */}
-      <div className="absolute inset-0 pointer-events-none">
+      {/* Floating Particles - Lower positioning */}
+      <div className="absolute bottom-0 left-0 right-0 h-[70vh] pointer-events-none">
         {[...Array(6)].map((_, i) => (
           <div
             key={i}
             className="absolute w-2 h-2 bg-primary/30 rounded-full blur-sm"
             style={{
               left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
+              top: `${50 + Math.random() * 50}%`,
               animation: `float ${3 + Math.random() * 4}s ease-in-out infinite`,
               animationDelay: `${Math.random() * 2}s`
             }}
@@ -44,7 +44,7 @@ export default function MaritimeVoice() {
       </div>
 
       {/* Header Section */}
-      <div className="text-center mb-12 space-y-6 animate-fade-in relative z-10">
+      <div className="text-center mb-8 space-y-4 animate-fade-in relative z-10">
         <div className="inline-block relative">
           {/* Glow Effect */}
           <div className="absolute -inset-4 bg-gradient-ocean blur-2xl opacity-30 animate-pulse" />
@@ -121,11 +121,11 @@ export default function MaritimeVoice() {
               }} 
             />
             
-            {/* Decorative Elements */}
+            {/* Decorative Elements - Positioned lower */}
             <div className="absolute inset-0 pointer-events-none">
-              <div className="absolute top-0 left-0 w-40 h-40 bg-primary/10 rounded-full blur-3xl animate-pulse" />
-              <div className="absolute bottom-0 right-0 w-48 h-48 bg-accent/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-primary/5 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '0.5s' }} />
+              <div className="absolute bottom-10 left-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl animate-pulse" />
+              <div className="absolute bottom-0 right-10 w-48 h-48 bg-accent/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+              <div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-32 h-32 bg-primary/5 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '0.5s' }} />
             </div>
           </div>
 
