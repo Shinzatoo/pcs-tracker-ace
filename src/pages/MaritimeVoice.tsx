@@ -194,12 +194,12 @@ export default function MaritimeVoice() {
           {/* Multi-layered central orb with gradient */}
           <div className="absolute w-64 h-64 rounded-full" style={{
             background: `
-              radial-gradient(circle at 45% 45%, hsl(var(--primary) / 0.6) 0%, transparent 50%),
-              radial-gradient(circle at center, hsl(var(--primary) / 0.4) 0%, transparent 70%)
+              radial-gradient(circle at 45% 45%, hsl(var(--primary) / 0.3) 0%, transparent 50%),
+              radial-gradient(circle at center, hsl(var(--primary) / 0.2) 0%, transparent 70%)
             `,
             boxShadow: isActive 
-              ? '0 0 100px 50px hsl(var(--primary) / 0.5), inset 0 0 60px hsl(var(--primary) / 0.6)' 
-              : '0 0 60px 30px hsl(var(--primary) / 0.3), inset 0 0 40px hsl(var(--primary) / 0.4)',
+              ? '0 0 100px 50px hsl(var(--primary) / 0.3), inset 0 0 60px hsl(var(--primary) / 0.2)' 
+              : '0 0 60px 30px hsl(var(--primary) / 0.15), inset 0 0 40px hsl(var(--primary) / 0.1)',
             animation: isActive ? 'pulse-glow 1.5s ease-in-out infinite' : 'none',
             transition: 'all 0.3s ease'
           }} />
@@ -209,8 +209,8 @@ export default function MaritimeVoice() {
             isActive ? 'border-primary' : 'border-primary/50'
           }`} style={{
             boxShadow: isActive 
-              ? '0 0 40px hsl(var(--primary)), inset 0 0 40px hsl(var(--primary) / 0.5)' 
-              : '0 0 20px hsl(var(--primary) / 0.5), inset 0 0 20px hsl(var(--primary) / 0.3)',
+              ? '0 0 40px hsl(var(--primary) / 0.5), inset 0 0 40px hsl(var(--primary) / 0.2)' 
+              : '0 0 20px hsl(var(--primary) / 0.3), inset 0 0 20px hsl(var(--primary) / 0.1)',
           }} />
           
           {/* M.A.R.I.T.I.M.E Text */}
