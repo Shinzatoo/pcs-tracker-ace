@@ -107,6 +107,7 @@ export default {
         "gradient-ocean": "var(--gradient-ocean)",
         "gradient-harbor": "var(--gradient-harbor)",
         "gradient-sunset": "var(--gradient-sunset)",
+        "gradient-radial": "radial-gradient(circle, var(--tw-gradient-stops))",
       },
       boxShadow: {
         "maritime": "var(--shadow-maritime)",

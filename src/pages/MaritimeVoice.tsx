@@ -6,7 +6,6 @@ import { Loader2Icon, PhoneIcon, PhoneOffIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Orb } from "@/components/ui/orb";
 import { ShimmeringText } from "@/components/ui/shimmering-text";
 
 const DEFAULT_AGENT = {
@@ -68,30 +67,39 @@ export default function MaritimeVoice() {
   const isTransitioning =
     agentState === "connecting" || agentState === "disconnecting";
 
-  const getInputVolume = useCallback(() => {
-    const rawValue = conversation.getInputVolume?.() ?? 0;
-    return Math.min(1.0, Math.pow(rawValue, 0.5) * 2.5);
-  }, [conversation]);
-
-  const getOutputVolume = useCallback(() => {
-    const rawValue = conversation.getOutputVolume?.() ?? 0;
-    return Math.min(1.0, Math.pow(rawValue, 0.5) * 2.5);
-  }, [conversation]);
-
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <Card className="flex h-[500px] w-full max-w-md flex-col items-center justify-center overflow-hidden p-8">
         <div className="flex flex-col items-center gap-8">
           <div className="relative size-48">
-            <div className="bg-muted relative h-full w-full rounded-full p-1 shadow-[inset_0_2px_8px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)]">
-              <div className="bg-background h-full w-full overflow-hidden rounded-full shadow-[inset_0_0_12px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_12px_rgba(0,0,0,0.3)]">
-                <Orb
-                  className="h-full w-full"
-                  volumeMode="manual"
-                  getInputVolume={getInputVolume}
-                  getOutputVolume={getOutputVolume}
-                />
-              </div>
+            <div className="relative h-full w-full rounded-full overflow-hidden bg-gradient-to-br from-primary/20 via-primary/10 to-transparent">
+              {/* Animated orb layers */}
+              <motion.div
+                className="absolute inset-0 rounded-full bg-gradient-radial from-primary/30 to-transparent"
+                animate={{
+                  scale: isCallActive ? [1, 1.2, 1] : 1,
+                  opacity: isCallActive ? [0.5, 0.8, 0.5] : 0.3,
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              />
+              <motion.div
+                className="absolute inset-4 rounded-full bg-gradient-radial from-primary/40 to-transparent"
+                animate={{
+                  scale: isCallActive ? [1, 1.15, 1] : 1,
+                  opacity: isCallActive ? [0.6, 0.9, 0.6] : 0.4,
+                }}
+                transition={{
+                  duration: 1.5,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: 0.2
+                }}
+              />
+              <div className="absolute inset-8 rounded-full bg-primary/60 backdrop-blur-sm" />
             </div>
           </div>
 
