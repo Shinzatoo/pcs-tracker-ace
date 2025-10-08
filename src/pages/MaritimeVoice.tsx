@@ -1,139 +1,193 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useConversation } from "@elevenlabs/react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Loader2Icon, PhoneIcon, PhoneOffIcon } from "lucide-react";
+
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Orb } from "@/components/ui/orb";
+import { ShimmeringText } from "@/components/ui/shimmering-text";
+
+const DEFAULT_AGENT = {
+  agentId: "agent_6401k6ckrp19e26rkg2qzpzsrwna",
+  name: "M.A.R.I.T.I.M.E",
+  description: "Tap to start voice chat",
+};
+
+type AgentState =
+  | "disconnected"
+  | "connecting"
+  | "connected"
+  | "disconnecting"
+  | null;
 
 export default function MaritimeVoice() {
-  const [isActive, setIsActive] = useState(false);
+  const [agentState, setAgentState] = useState<AgentState>("disconnected");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Load ElevenLabs script
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/@elevenlabs/convai-widget-embed';
-    script.async = true;
-    script.type = 'text/javascript';
-    document.body.appendChild(script);
+  const conversation = useConversation({
+    onConnect: () => console.log("Connected"),
+    onDisconnect: () => console.log("Disconnected"),
+    onMessage: (message) => console.log("Message:", message),
+    onError: (error) => {
+      console.error("Error:", error);
+      setAgentState("disconnected");
+    },
+  });
 
-    // Detect audio activity
-    let audioContext: AudioContext | null = null;
-    let analyser: AnalyserNode | null = null;
-    let microphone: MediaStreamAudioSourceNode | null = null;
-    let rafId: number;
-
-    const startAudioDetection = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        audioContext = new AudioContext();
-        analyser = audioContext.createAnalyser();
-        microphone = audioContext.createMediaStreamSource(stream);
-        
-        analyser.fftSize = 256;
-        microphone.connect(analyser);
-        
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
-        
-        const checkAudio = () => {
-          analyser!.getByteFrequencyData(dataArray);
-          const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
-          setIsActive(average > 30);
-          rafId = requestAnimationFrame(checkAudio);
-        };
-        
-        checkAudio();
-      } catch (err) {
-        console.error('Microphone access denied:', err);
+  const startConversation = useCallback(async () => {
+    try {
+      setErrorMessage(null);
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      await conversation.startSession({
+        agentId: DEFAULT_AGENT.agentId,
+        connectionType: "webrtc",
+        onStatusChange: (status) => setAgentState(status.status),
+      });
+    } catch (error) {
+      console.error("Error starting conversation:", error);
+      setAgentState("disconnected");
+      if (error instanceof DOMException && error.name === "NotAllowedError") {
+        setErrorMessage("Please enable microphone permissions in your browser.");
       }
-    };
+    }
+  }, [conversation]);
 
-    // Delay audio detection to allow user interaction first
-    const timer = setTimeout(startAudioDetection, 1000);
+  const handleCall = useCallback(() => {
+    if (agentState === "disconnected" || agentState === null) {
+      setAgentState("connecting");
+      startConversation();
+    } else if (agentState === "connected") {
+      conversation.endSession();
+      setAgentState("disconnected");
+    }
+  }, [agentState, conversation, startConversation]);
 
-    return () => {
-      clearTimeout(timer);
-      if (rafId) cancelAnimationFrame(rafId);
-      if (microphone) microphone.disconnect();
-      if (audioContext) audioContext.close();
-      document.body.removeChild(script);
-    };
-  }, []);
+  const isCallActive = agentState === "connected";
+  const isTransitioning =
+    agentState === "connecting" || agentState === "disconnecting";
+
+  const getInputVolume = useCallback(() => {
+    const rawValue = conversation.getInputVolume?.() ?? 0;
+    return Math.min(1.0, Math.pow(rawValue, 0.5) * 2.5);
+  }, [conversation]);
+
+  const getOutputVolume = useCallback(() => {
+    const rawValue = conversation.getOutputVolume?.() ?? 0;
+    return Math.min(1.0, Math.pow(rawValue, 0.5) * 2.5);
+  }, [conversation]);
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center relative">
-      {/* Central content */}
-      <div className="relative flex flex-col items-center justify-center">
-        {/* Multi-layered central orb with gradient */}
-        <div className="absolute w-64 h-64 rounded-full" style={{
-          background: `
-            radial-gradient(circle at 45% 45%, hsl(var(--primary) / 0.1) 0%, transparent 50%),
-            radial-gradient(circle at center, hsl(var(--primary) / 0.1) 0%, transparent 70%)
-          `,
-          boxShadow: isActive 
-            ? '0 0 100px 50px hsl(var(--primary) / 0.3), inset 0 0 60px hsl(var(--primary) / 0.2)' 
-            : '0 0 60px 30px hsl(var(--primary) / 0.15), inset 0 0 40px hsl(var(--primary) / 0.1)',
-          animation: isActive ? 'pulse-glow 1.5s ease-in-out infinite' : 'none',
-          transition: 'all 0.3s ease'
-        }} />
-        
-        {/* Inner glow ring */}
-        <div className={`absolute w-40 h-40 rounded-full border-2 transition-all duration-300 ${
-          isActive ? 'border-primary' : 'border-primary/50'
-        }`} style={{
-          boxShadow: isActive 
-            ? '0 0 40px hsl(var(--primary) / 0.5), inset 0 0 40px hsl(var(--primary) / 0.2)' 
-            : '0 0 20px hsl(var(--primary) / 0.3), inset 0 0 20px hsl(var(--primary) / 0.1)',
-        }} />
-        
-        {/* M.A.R.I.T.I.M.E Text */}
-        <div className="relative z-20 text-center">
-          <h1 className="text-4xl font-bold tracking-[0.4em] text-primary" style={{
-            textShadow: isActive 
-              ? '0 0 30px hsl(var(--primary)), 0 0 60px hsl(var(--primary) / 0.5), 0 0 90px hsl(var(--primary) / 0.3)'
-              : '0 0 15px hsl(var(--primary) / 0.6), 0 0 30px hsl(var(--primary) / 0.3)',
-            fontFamily: 'monospace',
-            letterSpacing: '0.3em'
-          }}>
-            M.A.R.I.T.I.M.E
-          </h1>
-          
-          {/* Animated indicator dots */}
-          <div className="flex justify-center gap-1.5 mt-4">
-            {[...Array(9)].map((_, i) => (
-              <div 
-                key={i}
-                className={`w-1 h-1 rounded-full transition-all duration-300 ${
-                  isActive ? 'bg-primary shadow-[0_0_8px_hsl(var(--primary))]' : 'bg-primary/40'
-                }`}
-                style={{
-                  animation: isActive ? `blink ${0.6 + i * 0.08}s ease-in-out infinite` : 'none',
-                  animationDelay: `${i * 0.1}s`
-                }}
-              />
-            ))}
+    <div className="min-h-screen bg-background flex items-center justify-center p-6">
+      <Card className="flex h-[500px] w-full max-w-md flex-col items-center justify-center overflow-hidden p-8">
+        <div className="flex flex-col items-center gap-8">
+          <div className="relative size-48">
+            <div className="bg-muted relative h-full w-full rounded-full p-1 shadow-[inset_0_2px_8px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)]">
+              <div className="bg-background h-full w-full overflow-hidden rounded-full shadow-[inset_0_0_12px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_12px_rgba(0,0,0,0.3)]">
+                <Orb
+                  className="h-full w-full"
+                  volumeMode="manual"
+                  getInputVolume={getInputVolume}
+                  getOutputVolume={getOutputVolume}
+                />
+              </div>
+            </div>
           </div>
+
+          <div className="flex flex-col items-center gap-3">
+            <h2 className="text-2xl font-bold tracking-[0.3em]">{DEFAULT_AGENT.name}</h2>
+            <AnimatePresence mode="wait">
+              {errorMessage ? (
+                <motion.p
+                  key="error"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="text-destructive text-center text-sm"
+                >
+                  {errorMessage}
+                </motion.p>
+              ) : agentState === "disconnected" || agentState === null ? (
+                <motion.p
+                  key="disconnected"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="text-muted-foreground text-sm"
+                >
+                  {DEFAULT_AGENT.description}
+                </motion.p>
+              ) : (
+                <motion.div
+                  key="status"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="flex items-center gap-2"
+                >
+                  <div
+                    className={cn(
+                      "h-2 w-2 rounded-full transition-all duration-300",
+                      agentState === "connected" && "bg-green-500",
+                      isTransitioning && "bg-primary/60 animate-pulse"
+                    )}
+                  />
+                  <span className="text-sm capitalize">
+                    {isTransitioning ? (
+                      <ShimmeringText text={agentState} />
+                    ) : (
+                      <span className="text-green-600">Connected</span>
+                    )}
+                  </span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <Button
+            onClick={handleCall}
+            disabled={isTransitioning}
+            size="icon"
+            variant={isCallActive ? "secondary" : "default"}
+            className="h-14 w-14 rounded-full"
+          >
+            <AnimatePresence mode="wait">
+              {isTransitioning ? (
+                <motion.div
+                  key="loading"
+                  initial={{ opacity: 0, rotate: 0 }}
+                  animate={{ opacity: 1, rotate: 360 }}
+                  exit={{ opacity: 0 }}
+                  transition={{
+                    rotate: { duration: 1, repeat: Infinity, ease: "linear" },
+                  }}
+                >
+                  <Loader2Icon className="h-6 w-6" />
+                </motion.div>
+              ) : isCallActive ? (
+                <motion.div
+                  key="end"
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.5 }}
+                >
+                  <PhoneOffIcon className="h-6 w-6" />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="start"
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.5 }}
+                >
+                  <PhoneIcon className="h-6 w-6" />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </Button>
         </div>
-
-        {/* ElevenLabs widget */}
-        <div className="mt-32" 
-             dangerouslySetInnerHTML={{ 
-               __html: '<elevenlabs-convai agent-id="agent_6401k6ckrp19e26rkg2qzpzsrwna"></elevenlabs-convai>' 
-             }} 
-        />
-      </div>
-
-      <style>{`
-        @keyframes pulse-glow {
-          0%, 100% { 
-            transform: scale(1);
-            opacity: 0.8;
-          }
-          50% { 
-            transform: scale(1.1);
-            opacity: 1;
-          }
-        }
-        
-        @keyframes blink {
-          0%, 100% { opacity: 0.3; }
-          50% { opacity: 1; }
-        }
-      `}</style>
+      </Card>
     </div>
   );
 }
